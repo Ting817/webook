@@ -1,9 +1,15 @@
 package main
 
 import (
-	"Training/demo1"
+	"junior-engineer-training/content/webook"
 )
 
 func main() {
-	demo1.Demo1()
+
+	// 作业
+	// week1.Demo()
+
+	// 课堂练习
+	webook.Main() // 即week2作业
+
 }
