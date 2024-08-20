@@ -128,12 +128,28 @@ func (u *UserHandler) Login(c *gin.Context) {
 	// 在此登录成功了 设置session里的值 步骤2
 	sess := sessions.Default(c)
 	sess.Set("userId", user.Id)
+	sess.Options(sessions.Options{
+		// Secure:   true,
+		// HttpOnly: true,
+		MaxAge: 30 * 60, // 登录有效期30分钟
+	})
 	sess.Save()
 
 	// 登录成功
 	c.String(http.StatusOK, "login success!")
 
 	return
+}
+
+func (u *UserHandler) LogOut(c *gin.Context) {
+	sess := sessions.Default(c)
+	sess.Options(sessions.Options{
+		// Secure:   true,   // 只在生产环境中设置这两个
+		// HttpOnly: true,
+		MaxAge: -1, // 把cookie删掉, 即退出登录了
+	})
+	sess.Save()
+	c.String(http.StatusOK, "log out success!")
 }
 
 func (u *UserHandler) Edit(c *gin.Context) {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -15,8 +16,6 @@ import (
 	"junior-engineer-training/content/webook/internal/service"
 	"junior-engineer-training/content/webook/web"
 	"junior-engineer-training/content/webook/web/middleware"
-
-	"github.com/gin-contrib/sessions/cookie"
 )
 
 func Main() {
@@ -46,7 +45,17 @@ func initWebServer() *gin.Engine {
 	}))
 
 	// 实现登录功能 步骤1
-	store := cookie.NewStore([]byte("secret"))
+	// store := cookie.NewStore([]byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"), []byte("Hg2WjnYiGz4XUNVhBUNAIrSu35Z7uyPA"))
+
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "", []byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"), []byte("Hg2WjnYiGz4XUNVhBUNAIrSu35Z7uyPA"))
+	if err != nil {
+		panic(err)
+	}
+
+	// 实现sqlx
+	// myStore := sqlx_store.Store{}
+	// server.Use(sessions.Sessions("mysession", myStore))
+
 	server.Use(sessions.Sessions("mysession", store)) // cookie的名字叫做mysession
 
 	// 步骤3
