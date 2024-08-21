@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"encoding/gob"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -71,9 +72,22 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("claims", claims)
+		if claims.UserAgent != c.Request.UserAgent() {
+			// 出现严重的安全问题 要监控
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		// 登录刷新 每10s刷新一次 (jwt有效期1min)
+		now := time.Now()
+		if claims.ExpiresAt.Sub(now) < time.Second*50 {
+			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
+			tokenStr, err = token.SignedString([]byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"))
+			if err != nil {
+				log.Println("jwt 续约失败", err)
+			}
+			c.Header("x-jwt-token", tokenStr)
+		}
 
-		// 刷新
-		// expireTime, err :=
+		c.Set("claims", claims)
 	}
 }

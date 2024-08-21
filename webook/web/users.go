@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
@@ -169,12 +170,17 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 
 	// 步骤2 在此设置JWT登录态 生成一个JWT token
 	claims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
 		Uid: user.Id,
+		// UserAgent: c.GetHeader("User-Agent"),
+		UserAgent: c.Request.UserAgent(),
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodES512, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenStr, err := token.SignedString([]byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"))
 	if err != nil {
-		c.String(http.StatusInternalServerError, "system error")
+		c.String(http.StatusInternalServerError, "system error,"+err.Error())
 		return
 	}
 	c.Header("x-jwt-token", tokenStr)
@@ -189,7 +195,8 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	Uid int64 // Uid: 额外加自己的数据在token里
+	Uid       int64 // Uid: 额外加自己的数据在token里
+	UserAgent string
 }
 
 func (u *UserHandler) LogOut(c *gin.Context) {
@@ -276,20 +283,5 @@ func (u *UserHandler) ProfileJWT(c *gin.Context) {
 		c.String(http.StatusOK, "system error")
 	}
 	fmt.Printf("claims.Uid-------->%v\n", claims.Uid)
-	uu, err := u.svc.Profile(c, claims)
-	if errors.Is(err, service.ErrRecordNotFound) {
-		c.String(http.StatusNotFound, "User not found")
-		return
-	}
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to retrieve profile")
-		return
-	}
-
-	fmt.Printf("uu-------->%v\n", uu)
-
-	c.JSON(http.StatusOK, gin.H{
-		"nickname": uu.NickName,
-		"birthday": uu.Birthday,
-		"bio":      uu.Bio})
+	c.String(http.StatusOK, "hi, here is profile.")
 }
