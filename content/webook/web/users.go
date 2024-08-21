@@ -38,9 +38,9 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	s := server.Group("/users")
 	s.POST("/signup", u.SignUp) // 注册
-	// s.POST("/login", u.Login)   // 登录
-	s.POST("/loginJWT", u.LoginJWT) // 通过JWT登录
-	s.POST("/edit", u.Edit)         // 编辑
+	s.POST("/login", u.Login)   // 登录
+	// s.POST("/loginJWT", u.LoginJWT) // 通过JWT登录
+	s.POST("/edit", u.Edit) // 编辑
 	s.GET("/profile", u.Profile)
 }
 
@@ -194,7 +194,6 @@ func (u *UserHandler) LogOut(c *gin.Context) {
 
 func (u *UserHandler) Edit(c *gin.Context) {
 	type editReq struct {
-		Email    string `json:"email"`
 		Nickname string `json:"nickname"`
 		Birthday string `json:"birthday"`
 		Bio      string `json:"bio"`
@@ -222,8 +221,8 @@ func (u *UserHandler) Edit(c *gin.Context) {
 		return
 	}
 
-	err := u.svc.Edit(c, domain.User{
-		Email:    req.Email,
+	uid := sessions.Default(c).Get("userId")
+	err := u.svc.Edit(c, uid, domain.User{
 		NickName: req.Nickname,
 		Birthday: req.Birthday,
 		Bio:      req.Bio,
@@ -234,7 +233,6 @@ func (u *UserHandler) Edit(c *gin.Context) {
 	}
 
 	editJson := editReq{
-		Email:    req.Email,
 		Nickname: req.Nickname,
 		Birthday: req.Birthday,
 		Bio:      req.Bio,
@@ -244,15 +242,8 @@ func (u *UserHandler) Edit(c *gin.Context) {
 }
 
 func (u *UserHandler) Profile(c *gin.Context) {
-	type profileReq struct {
-		Email string `json:"email"`
-	}
-	var req profileReq
-	if err := c.Bind(&req); err != nil {
-		c.String(http.StatusBadRequest, "Invalid request data")
-		return
-	}
-	uu, err := u.svc.Profile(c, req.Email)
+	uid := sessions.Default(c).Get("userId")
+	uu, err := u.svc.Profile(c, uid)
 	if errors.Is(err, service.ErrRecordNotFound) {
 		c.String(http.StatusNotFound, "User not found")
 		return
@@ -265,7 +256,6 @@ func (u *UserHandler) Profile(c *gin.Context) {
 	fmt.Printf("uu-------->%v\n", uu)
 
 	c.JSON(http.StatusOK, gin.H{
-		"email":    req.Email,
 		"nickname": uu.NickName,
 		"birthday": uu.Birthday,
 		"bio":      uu.Bio})

@@ -49,12 +49,12 @@ func (ud *UserDAO) Insert(c context.Context, u User) error {
 	return nil
 }
 
-func (ud *UserDAO) Update(c context.Context, u User) error {
+func (ud *UserDAO) Update(c context.Context, uid interface{}, u User) error {
 	// 存毫秒数
 	now := time.Now().UnixMilli()
 	u.Utime = now
 
-	err := ud.db.WithContext(c).Where("email = ?", u.Email).Updates(u).Error
+	err := ud.db.WithContext(c).Where("id = ?", uid).Updates(u).Error
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) { // 类型断言
 		const uniqueIndexErrNo uint16 = 1062
@@ -69,6 +69,12 @@ func (ud *UserDAO) Update(c context.Context, u User) error {
 func (ud *UserDAO) FindByEmail(c context.Context, email string) (User, error) {
 	var u User
 	err := ud.db.WithContext(c).Where("email = ?", email).First(&u).Error
+	return u, err
+}
+
+func (ud *UserDAO) FindByUserId(c context.Context, uid interface{}) (User, error) {
+	var u User
+	err := ud.db.WithContext(c).Where("id = ?", uid).First(&u).Error
 	return u, err
 }
 
