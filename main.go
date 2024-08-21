@@ -1,7 +1,7 @@
 package main
 
 import (
-	"junior-engineer-training/content/webook"
+	"junior-engineer-training/webook"
 )
 
 func main() {
