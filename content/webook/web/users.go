@@ -8,6 +8,7 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 
 	"junior-engineer-training/content/webook/internal/domain"
 	"junior-engineer-training/content/webook/internal/service"
@@ -38,7 +39,8 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	s := server.Group("/users")
 	s.POST("/signup", u.SignUp) // 注册
 	s.POST("/login", u.Login)   // 登录
-	s.POST("/edit", u.Edit)     // 编辑
+	// s.POST("/loginJWT", u.LoginJWT) // 通过JWT登录
+	s.POST("/edit", u.Edit) // 编辑
 	s.GET("/profile", u.Profile)
 }
 
@@ -128,6 +130,11 @@ func (u *UserHandler) Login(c *gin.Context) {
 	// 在此登录成功了 设置session里的值 步骤2
 	sess := sessions.Default(c)
 	sess.Set("userId", user.Id)
+	sess.Options(sessions.Options{
+		// Secure:   true,
+		// HttpOnly: true,
+		MaxAge: 30 * 60, // 登录有效期30分钟
+	})
 	sess.Save()
 
 	// 登录成功
@@ -136,9 +143,57 @@ func (u *UserHandler) Login(c *gin.Context) {
 	return
 }
 
+// LoginJWT 登录
+func (u *UserHandler) LoginJWT(c *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	if err := c.Bind(&req); err != nil {
+		_ = fmt.Errorf("login fail. %w\n", err)
+		return
+	}
+
+	user, err := u.svc.Login(c, req.Email, req.Password)
+	if errors.Is(err, service.ErrInvalidUserOrPassword) {
+		c.String(http.StatusOK, "user or password error.")
+		return
+	}
+	if err != nil {
+		c.String(http.StatusOK, "system error.")
+		return
+	}
+
+	// 步骤2 在此设置JWT登录态 生成一个JWT token
+	token := jwt.New(jwt.SigningMethodES512)
+	tokenStr, err := token.SignedString([]byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"))
+	if err != nil {
+		c.String(http.StatusInternalServerError, "system error")
+		return
+	}
+	c.Header("x-jwt-token", tokenStr)
+	fmt.Printf("user--------->%v\n", user)
+
+	// 登录成功
+	c.String(http.StatusOK, "login success!")
+
+	return
+}
+
+func (u *UserHandler) LogOut(c *gin.Context) {
+	sess := sessions.Default(c)
+	sess.Options(sessions.Options{
+		// Secure:   true,   // 只在生产环境中设置这两个
+		// HttpOnly: true,
+		MaxAge: -1, // 把cookie删掉, 即退出登录了
+	})
+	sess.Save()
+	c.String(http.StatusOK, "log out success!")
+}
+
 func (u *UserHandler) Edit(c *gin.Context) {
 	type editReq struct {
-		Email    string `json:"email"`
 		Nickname string `json:"nickname"`
 		Birthday string `json:"birthday"`
 		Bio      string `json:"bio"`
@@ -166,8 +221,8 @@ func (u *UserHandler) Edit(c *gin.Context) {
 		return
 	}
 
-	err := u.svc.Edit(c, domain.User{
-		Email:    req.Email,
+	uid := sessions.Default(c).Get("userId")
+	err := u.svc.Edit(c, uid, domain.User{
 		NickName: req.Nickname,
 		Birthday: req.Birthday,
 		Bio:      req.Bio,
@@ -178,7 +233,6 @@ func (u *UserHandler) Edit(c *gin.Context) {
 	}
 
 	editJson := editReq{
-		Email:    req.Email,
 		Nickname: req.Nickname,
 		Birthday: req.Birthday,
 		Bio:      req.Bio,
@@ -188,15 +242,8 @@ func (u *UserHandler) Edit(c *gin.Context) {
 }
 
 func (u *UserHandler) Profile(c *gin.Context) {
-	type profileReq struct {
-		Email string `json:"email"`
-	}
-	var req profileReq
-	if err := c.Bind(&req); err != nil {
-		c.String(http.StatusBadRequest, "Invalid request data")
-		return
-	}
-	uu, err := u.svc.Profile(c, req.Email)
+	uid := sessions.Default(c).Get("userId")
+	uu, err := u.svc.Profile(c, uid)
 	if errors.Is(err, service.ErrRecordNotFound) {
 		c.String(http.StatusNotFound, "User not found")
 		return
@@ -209,7 +256,6 @@ func (u *UserHandler) Profile(c *gin.Context) {
 	fmt.Printf("uu-------->%v\n", uu)
 
 	c.JSON(http.StatusOK, gin.H{
-		"email":    req.Email,
 		"nickname": uu.NickName,
 		"birthday": uu.Birthday,
 		"bio":      uu.Bio})
