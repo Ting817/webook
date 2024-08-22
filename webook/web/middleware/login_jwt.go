@@ -37,7 +37,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 		}
 		// 用 JWT 来登录校验
-		tokenHeader := c.GetHeader("authorization")
+		tokenHeader := c.GetHeader("Authorization")
 
 		// 情况1：没带token
 		if tokenHeader == "" {

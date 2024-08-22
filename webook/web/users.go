@@ -126,7 +126,7 @@ func (u *UserHandler) Login(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		c.String(http.StatusOK, "system error.")
+		c.String(http.StatusOK, "system error,"+err.Error())
 		return
 	}
 
@@ -164,7 +164,7 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		c.String(http.StatusOK, "system error.")
+		c.String(http.StatusOK, "system error,"+err.Error())
 		return
 	}
 
