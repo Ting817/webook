@@ -8,20 +8,16 @@ spec:
   selector:
     matchLabels:
       app: webook
-# template 描述的是pod是怎样的
+  # template 描述的是pod是怎样的
   template:
     metadata:
       name: webook
       labels:
         app: webook
-# pod 的基本信息
+    # pod 的基本信息
     spec:
       containers:
         - name: webook
-          image: ting17/webook:v0.0.1
-          imagePullPolicy: IfNotPresent
+          image: ting17/webook:v0.0.2
           ports:
-            - containerPort: 80
-              protocol: TCP
-      restartPolicy: Always
-      
+            - containerPort: 8080

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"junior-engineer-training/webook/internal/domain"
-	"junior-engineer-training/webook/internal/repository/dao"
+	"webook/internal/domain"
+	"webook/internal/repository/dao"
 )
 
 var (

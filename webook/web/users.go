@@ -11,8 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"junior-engineer-training/webook/internal/domain"
-	"junior-engineer-training/webook/internal/service"
+	"webook/internal/domain"
+	"webook/internal/service"
 )
 
 type UserHandler struct {

@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 
-	"junior-engineer-training/webook/internal/domain"
-	"junior-engineer-training/webook/internal/repository"
+	"webook/internal/domain"
+	"webook/internal/repository"
 )
 
 var (

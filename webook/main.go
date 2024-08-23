@@ -1,6 +1,7 @@
-package webook
+package main
 
 import (
+	"net/http"
 	"strings"
 	"time"
 
@@ -11,20 +12,24 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 
-	"junior-engineer-training/webook/internal/repository"
-	"junior-engineer-training/webook/internal/repository/dao"
-	"junior-engineer-training/webook/internal/service"
-	"junior-engineer-training/webook/pkg/ginx/middlewares/ratelimit"
-	"junior-engineer-training/webook/web"
-	"junior-engineer-training/webook/web/middleware"
+	"webook/internal/repository"
+	"webook/internal/repository/dao"
+	"webook/internal/service"
+	"webook/pkg/ginx/middlewares/ratelimit"
+	"webook/web"
+	"webook/web/middleware"
 )
 
-func Main() {
-	db := initDB()
-	u := initUser(db)
-	// server := initWebServer()  // 用session
-	server := initWebServerJWT() // 用JWT
-	u.RegisterRoutes(server)
+func main() {
+	// db := initDB()
+	// u := initUser(db)
+	// // server := initWebServer()  // 用session
+	// server := initWebServerJWT() // 用JWT
+	// u.RegisterRoutes(server)
+	server := gin.Default()
+	server.GET("/hello", func(c *gin.Context) {
+		c.String(http.StatusOK, "hello, welcome to here")
+	})
 	server.Run(":8080")
 }
 
