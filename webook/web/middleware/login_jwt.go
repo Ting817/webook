@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
-	"junior-engineer-training/webook/web"
+	"webook/web"
 )
 
 type LoginJWTMiddlewareBuilder struct {
