@@ -239,7 +239,7 @@ func (u *UserHandler) Edit(c *gin.Context) {
 		return
 	}
 
-	uid := sessions.Default(c).Get("userId")
+	uid := sessions.Default(c).Get("userId").(int64)
 	err := u.svc.Edit(c, uid, domain.User{
 		NickName: req.Nickname,
 		Birthday: req.Birthday,
@@ -260,7 +260,7 @@ func (u *UserHandler) Edit(c *gin.Context) {
 }
 
 func (u *UserHandler) Profile(c *gin.Context) {
-	uid := sessions.Default(c).Get("userId")
+	uid := sessions.Default(c).Get("userId").(int64)
 	uu, err := u.svc.Profile(c, uid)
 	if errors.Is(err, service.ErrRecordNotFound) {
 		c.String(http.StatusNotFound, "User not found")

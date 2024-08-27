@@ -57,11 +57,11 @@ func (svc *UserService) Login(c context.Context, email, password string) (domain
 	return u, nil
 }
 
-func (svc *UserService) Edit(c context.Context, uid interface{}, u domain.User) error {
+func (svc *UserService) Edit(c context.Context, uid int64, u domain.User) error {
 	return svc.repo.Update(c, uid, u)
 }
 
-func (svc *UserService) Profile(c context.Context, uid interface{}) (domain.User, error) {
+func (svc *UserService) Profile(c context.Context, uid int64) (domain.User, error) {
 	u, err := svc.repo.FindById(c, uid)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("nothing found")

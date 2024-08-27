@@ -72,7 +72,7 @@ func (ud *UserDAO) FindByEmail(c context.Context, email string) (User, error) {
 	return u, err
 }
 
-func (ud *UserDAO) FindByUserId(c context.Context, uid interface{}) (User, error) {
+func (ud *UserDAO) FindByUserId(c context.Context, uid int64) (User, error) {
 	var u User
 	err := ud.db.WithContext(c).Where("id = ?", uid).First(&u).Error
 	return u, err
