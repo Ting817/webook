@@ -1,0 +1,17 @@
+[k8s]
+addr = ""
+token = ""
+namespace = "default"
+
+#[db]
+#dsn = "root:root@tcp(webook-mysql:11308)/webook"
+#
+#[redis]
+#addr = "webook-redis:6379"
+
+
+[db]
+dsn = "root:root@tcp(localhost:13316)/webook"
+
+[redis]
+addr = "localhost:6379"

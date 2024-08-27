@@ -4,7 +4,7 @@ metadata:
   name: webook
 spec:
   # 副本数量
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: webook
@@ -18,6 +18,16 @@ spec:
     spec:
       containers:
         - name: webook
-          image: ting17/webook:v0.0.2
+          image: ting17/webook:v0.0.4
           ports:
             - containerPort: 8080
+          volumeMounts:
+            - mountPath: /data/config
+              name: config-volume-webook
+      volumes:
+        - name: config-volume-webook
+          projected:
+            defaultMode: 420
+            sources:
+              - configMap:
+                  name: webook
