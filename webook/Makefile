@@ -3,8 +3,8 @@ docker:
 	@rm webook || true
 	@go mod tidy
 	@GOOS=linux GOARCH=arm go build -o webook . && chmod +x webook # 添加执行权限
-	@docker rmi -f ting17/webook:v0.0.2
-	@docker build -t ting17/webook:v0.0.2 .
+	@docker rmi -f ting17/webook:v0.0.4
+	@docker build -t ting17/webook:v0.0.4 .
 
 # make docker
 
@@ -15,3 +15,5 @@ docker:
 # +x 是 chmod 命令中的一个选项，用于为文件或目录添加执行权限（execute permission）。
 # +: 表示添加权限。
 # x: 表示执行权限（execute permission）。
+
+# 	@GOOS=linux GOARCH=arm go build -tag=k8s -o webook . && chmod +x webook # 添加执行权限

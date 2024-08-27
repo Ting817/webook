@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: webook
 spec:
-  type: LoadBalancer  # 把它当成一个负载均衡器
+  type: LoadBalancer  # 把它当成一个负载均衡器. 如果不想让外部访问，则改为 ClusterIP
   selector:
     app: webook
   ports:

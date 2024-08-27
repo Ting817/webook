@@ -1,15 +1,11 @@
 package main
 
-import (
-	"junior-engineer-training/webook"
-)
-
 func main() {
 
 	// 作业
-	// week1.Demo()
+	// homework.Demo()
 
 	// 课堂练习 即week2作业
-	webook.Main()
+	// webook.Main()
 
 }

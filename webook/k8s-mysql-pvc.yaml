@@ -1,0 +1,16 @@
+# pvc => PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: webook-mysql-claim
+spec:
+  storageClassName: manual
+  accessModes:
+    # 一个pod读写
+    - ReadWriteOnce
+  resources:
+    requests:
+      # 1Gi 即 1GB
+      storage: 1Gi
+
+  
