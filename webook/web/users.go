@@ -15,13 +15,16 @@ import (
 	"webook/internal/service"
 )
 
+const biz = "login"
+
 type UserHandler struct {
 	svc         *service.UserService
+	codeSvc     *service.CodeService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 }
 
-func NewUserHandler(svc *service.UserService) *UserHandler {
+func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
 	// 信息校验：正则表达式
 	const (
 		emailRegexPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
@@ -33,6 +36,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 		svc:         svc,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
+		codeSvc:     codeSvc,
 	}
 }
 
@@ -44,7 +48,8 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	s.POST("/edit", u.Edit)      // 编辑
 	// s.GET("/profile", u.Profile)
 	s.GET("/profile", u.ProfileJWT)
-
+	s.POST("/login_sms/code/send", u.SendLoginSMSCode)
+	s.POST("/login_sms", u.LoginSMS)
 }
 
 // SignUp 注册
@@ -90,7 +95,7 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 		c.String(http.StatusOK, "system error.")
 	}
 
-	if errors.Is(err, service.ErrUserDuplicateEmail) {
+	if errors.Is(err, service.ErrUserDuplicate) {
 		c.String(http.StatusOK, "email conflict, please change another email.")
 		return
 	}
@@ -168,12 +173,23 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 		return
 	}
 
+	if err = u.setJWTToken(c, user.Id); err != nil {
+		c.String(http.StatusOK, "system error,"+err.Error())
+		return
+	}
+
+	// 登录成功
+	c.String(http.StatusOK, "login success!")
+	return
+}
+
+func (u *UserHandler) setJWTToken(c *gin.Context, uid int64) error {
 	// 步骤2 在此设置JWT登录态 生成一个JWT token
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
-		Uid: user.Id,
+		Uid: uid,
 		// UserAgent: c.GetHeader("User-Agent"),
 		UserAgent: c.Request.UserAgent(),
 	}
@@ -181,16 +197,10 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 	tokenStr, err := token.SignedString([]byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"))
 	if err != nil {
 		c.String(http.StatusInternalServerError, "system error,"+err.Error())
-		return
+		return err
 	}
 	c.Header("x-jwt-token", tokenStr)
-	fmt.Printf("tokenStr-------->%v\n", tokenStr)
-	fmt.Printf("user--------->%v\n", user)
-
-	// 登录成功
-	c.String(http.StatusOK, "login success!")
-
-	return
+	return nil
 }
 
 type UserClaims struct {
@@ -284,4 +294,76 @@ func (u *UserHandler) ProfileJWT(c *gin.Context) {
 	}
 	fmt.Printf("claims.Uid-------->%v\n", claims.Uid)
 	c.String(http.StatusOK, "hi, here is profile.")
+}
+
+func (u *UserHandler) SendLoginSMSCode(c *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone"`
+	}
+	var req Req
+	if err := c.Bind(&req); err != nil {
+		return
+	}
+	// 是不是合法的手机号 考虑正则表达式
+	if req.Phone == "" {
+		c.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "phone input error.",
+		})
+	}
+	err := u.codeSvc.Send(c, biz, req.Phone)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "system error!" + err.Error(),
+		})
+	}
+	c.JSON(http.StatusOK, "send code success!")
+}
+
+func (u *UserHandler) LoginSMS(c *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}
+	var req Req
+	if err := c.Bind(&req); err != nil {
+		return
+	}
+	ok, err := u.codeSvc.Verify(c, biz, req.Phone, req.Code)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "system error!" + err.Error(),
+		})
+		return
+	}
+	if !ok {
+		c.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "code error!",
+		})
+		return
+	}
+
+	user, err := u.svc.FindOrCreate(c, req.Phone)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "system error!" + err.Error(),
+		})
+		return
+	}
+
+	if err = u.setJWTToken(c, user.Id); err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "set jwt token error!" + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, Result{
+		Msg: "code verify success!",
+	})
 }

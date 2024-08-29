@@ -2,8 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"webook/internal/domain"
 	"webook/internal/repository/cache"
@@ -11,10 +13,10 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail
-	ErrUserNotFound       = dao.ErrUserNotFound
-	ErrInvalidData        = dao.ErrInvalidData
-	ErrRecordNotFound     = dao.ErrRecordNotFound
+	ErrUserDuplicate  = dao.ErrUserDuplicate
+	ErrUserNotFound   = dao.ErrUserNotFound
+	ErrInvalidData    = dao.ErrInvalidData
+	ErrRecordNotFound = dao.ErrRecordNotFound
 )
 
 type UserRepository struct {
@@ -30,10 +32,7 @@ func NewUserRepository(dao *dao.UserDAO, c *cache.UserCache) *UserRepository { /
 }
 
 func (r *UserRepository) Create(c context.Context, u domain.User) error {
-	return r.dao.Insert(c, dao.User{
-		Email:    u.Email,
-		Password: u.Password,
-	})
+	return r.dao.Insert(c, r.domainToEntity(u))
 }
 
 func (r *UserRepository) Update(c context.Context, uid int64, u domain.User) error {
@@ -56,14 +55,7 @@ func (r *UserRepository) FindById(c context.Context, uid int64) (domain.User, er
 	if err != nil {
 		return domain.User{}, fmt.Errorf("id can not be found. %w", err)
 	}
-	u = domain.User{
-		Email:    uu.Email,
-		Password: uu.Password,
-		Id:       uu.Id,
-		NickName: uu.NickName,
-		Birthday: uu.Birthday,
-		Bio:      uu.Bio,
-	}
+	u = r.entityToDomain(uu)
 	// 一致性
 	go func() {
 		err = r.cache.Set(c, u)
@@ -83,12 +75,40 @@ func (r *UserRepository) FindByEmail(c context.Context, email string) (domain.Us
 	if err != nil {
 		return domain.User{}, fmt.Errorf("email can not be found. %w", err)
 	}
-	return domain.User{
-		Email:    u.Email,
+	return r.entityToDomain(u), nil
+}
+
+func (r *UserRepository) FindByPhone(c context.Context, phone string) (domain.User, error) {
+	// SELECT * FROM `users` WHERE `email`=?
+	u, err := r.dao.FindByUserPhone(c, phone)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("phone not found. %w", err)
+	}
+	return r.entityToDomain(u), nil
+}
+
+func (r *UserRepository) domainToEntity(u domain.User) dao.User {
+	return dao.User{
+		Id: u.Id,
+		Email: sql.NullString{
+			String: u.Email,
+			Valid:  u.Email != "",
+		},
+		Phone: sql.NullString{
+			String: u.Phone,
+			Valid:  u.Phone != "",
+		},
 		Password: u.Password,
+		Ctime:    u.Ctime.UnixMilli(),
+	}
+}
+
+func (r *UserRepository) entityToDomain(u dao.User) domain.User {
+	return domain.User{
 		Id:       u.Id,
-		NickName: u.NickName,
-		Birthday: u.Birthday,
-		Bio:      u.Bio,
-	}, nil
+		Email:    u.Email.String,
+		Phone:    u.Phone.String,
+		Password: u.Password,
+		Ctime:    time.UnixMilli(u.Ctime),
+	}
 }

@@ -51,5 +51,5 @@ func (cs *CodeService) Verify(c context.Context, biz string, phone string, input
 func (cs *CodeService) generateCode() string {
 	// 随机生成六位数
 	num := rand.Intn(999999)
-	return fmt.Sprintf("%6d", num)
+	return fmt.Sprintf("%06d", num)
 }

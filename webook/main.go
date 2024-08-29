@@ -23,6 +23,7 @@ import (
 	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
 	"webook/internal/service"
+	"webook/internal/service/sms/memory"
 	"webook/pkg/ginx/middlewares/ratelimit"
 	"webook/web"
 	"webook/web/middleware"
@@ -77,7 +78,9 @@ func initWebServerJWT() *gin.Engine {
 	// 步骤3 用JWT
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").Build())
+		IgnorePaths("/users/login").
+		IgnorePaths("/users/login_sms/code/send").
+		IgnorePaths("/users/login_sms").Build())
 
 	// 限流
 	cmd := redis.NewClient(&redis.Options{
@@ -149,12 +152,16 @@ func initWebServer() *gin.Engine {
 	return server
 }
 
-func initUser(db *gorm.DB, client redis.Cmdable) *web.UserHandler {
+func initUser(db *gorm.DB, rdb redis.Cmdable) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	c := cache.NewUserCache(client)
+	c := cache.NewUserCache(rdb)
 	repo := repository.NewUserRepository(ud, c)
 	svc := service.NewUserService(repo)
-	u := web.NewUserHandler(svc)
+	codeCache := cache.NewCodeCache(rdb)
+	codeRepo := repository.NewCodeRepository(codeCache)
+	smsSvc := memory.NewService()
+	codeSvc := service.NewCodeService(smsSvc, codeRepo)
+	u := web.NewUserHandler(svc, codeSvc)
 	return u
 }
 

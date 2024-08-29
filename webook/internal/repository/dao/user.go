@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"time"
 
@@ -10,10 +11,10 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail = errors.New("email conflict")
-	ErrUserNotFound       = gorm.ErrRecordNotFound
-	ErrInvalidData        = gorm.ErrInvalidData
-	ErrRecordNotFound     = gorm.ErrRecordNotFound
+	ErrUserDuplicate  = errors.New("email or phone conflict")
+	ErrUserNotFound   = gorm.ErrRecordNotFound
+	ErrInvalidData    = gorm.ErrInvalidData
+	ErrRecordNotFound = gorm.ErrRecordNotFound
 )
 
 type UserDAO struct {
@@ -42,8 +43,8 @@ func (ud *UserDAO) Insert(c context.Context, u User) error {
 	if errors.As(err, &mysqlErr) { // 类型断言
 		const uniqueIndexErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueIndexErrNo {
-			// 邮箱冲突（邮箱在此是唯一索引）
-			return ErrUserDuplicateEmail
+			// 邮箱冲突 or 手机号码冲突
+			return ErrUserDuplicate
 		}
 	}
 	return nil
@@ -59,8 +60,7 @@ func (ud *UserDAO) Update(c context.Context, uid interface{}, u User) error {
 	if errors.As(err, &mysqlErr) { // 类型断言
 		const uniqueIndexErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueIndexErrNo {
-			// 邮箱冲突（邮箱在此是唯一索引）
-			return ErrUserDuplicateEmail
+			return ErrUserDuplicate
 		}
 	}
 	return nil
@@ -78,15 +78,22 @@ func (ud *UserDAO) FindByUserId(c context.Context, uid int64) (User, error) {
 	return u, err
 }
 
+func (ud *UserDAO) FindByUserPhone(c context.Context, phone string) (User, error) {
+	var u User
+	err := ud.db.WithContext(c).Where("phone = ?", phone).First(&u).Error
+	return u, err
+}
+
 // User 直接对应数据库表结构
 // 有人叫entity/model/PO(persistent object)
 type User struct {
-	Id       int64  `gorm:"primaryKey, autoIncrement" json:"id,omitempty"`
-	Email    string `gorm:"unique" json:"email,omitempty"`
-	Password string `json:"-"`
-	Ctime    int64  `json:"ctime,omitempty"` // 创建时间 毫秒数
-	Utime    int64  `json:"utime,omitempty"` // 更新时间 毫秒数
-	NickName string `json:"nickName,omitempty"`
-	Birthday string `json:"birthday,omitempty"`
-	Bio      string `json:"bio,omitempty"`
+	Id       int64          `gorm:"primaryKey, autoIncrement" json:"id,omitempty"`
+	Email    sql.NullString `gorm:"unique" json:"email,omitempty"`
+	Phone    sql.NullString `gorm:"unique" json:"phone"`
+	Password string         `json:"-"`
+	Ctime    int64          `json:"ctime,omitempty"` // 创建时间 毫秒数
+	Utime    int64          `json:"utime,omitempty"` // 更新时间 毫秒数
+	NickName string         `json:"nickName,omitempty"`
+	Birthday string         `json:"birthday,omitempty"`
+	Bio      string         `json:"bio,omitempty"`
 }
