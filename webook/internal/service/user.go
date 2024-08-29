@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail    = repository.ErrUserDuplicateEmail
+	ErrUserDuplicate         = repository.ErrUserDuplicate
 	ErrInvalidUserOrPassword = errors.New("user or password error")
 	ErrInvalidData           = repository.ErrInvalidData
 	ErrRecordNotFound        = repository.ErrRecordNotFound
@@ -67,4 +67,27 @@ func (svc *UserService) Profile(c context.Context, uid int64) (domain.User, erro
 		return domain.User{}, fmt.Errorf("nothing found")
 	}
 	return u, nil
+}
+
+func (svc *UserService) FindOrCreate(c context.Context, phone string) (domain.User, error) {
+	// 快路径
+	u, err := svc.repo.FindByPhone(c, phone)
+	if err != nil {
+		return u, fmt.Errorf("user find by phone failed. %w\n", err)
+	}
+	if c.Value("降级") == "true" {
+		return domain.User{}, fmt.Errorf("系统降级了. %w\n", err)
+	}
+	// 慢路径
+	// 如果没有这个用户
+	u = domain.User{
+		Phone: phone,
+	}
+	err = svc.repo.Create(c, u)
+	if err != nil && !errors.Is(err, repository.ErrUserDuplicate) {
+		return u, fmt.Errorf("create user by phone failed. %w\n", err)
+	}
+
+	// 这里会遇到主从延迟的问题
+	return svc.repo.FindByPhone(c, phone)
 }
