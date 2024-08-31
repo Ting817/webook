@@ -11,19 +11,24 @@ import (
 
 const codeTplId = "1877556"
 
-type CodeService struct {
-	sms  sms.Service
-	repo *repository.CodeRepository
+type CodeService interface {
+	Send(c context.Context, biz string, phone string) error
+	Verify(c context.Context, biz string, phone string, inputCode string) (bool, error)
 }
 
-func NewCodeService(sms sms.Service, repo *repository.CodeRepository) *CodeService {
-	return &CodeService{
+type SMSCodeService struct {
+	sms  sms.Service
+	repo repository.CodeRepository
+}
+
+func NewSMSCodeService(sms sms.Service, repo repository.CodeRepository) CodeService {
+	return &SMSCodeService{
 		sms:  sms,
 		repo: repo,
 	}
 }
 
-func (cs *CodeService) Send(c context.Context, biz string, phone string) error {
+func (cs *SMSCodeService) Send(c context.Context, biz string, phone string) error {
 	// 生成一个验证码，然后保持到redis中去，最后发送出去
 	code := cs.generateCode()
 	err := cs.repo.Store(c, biz, phone, code)
@@ -39,7 +44,7 @@ func (cs *CodeService) Send(c context.Context, biz string, phone string) error {
 	return nil
 }
 
-func (cs *CodeService) Verify(c context.Context, biz string, phone string, inputCode string) (bool, error) {
+func (cs *SMSCodeService) Verify(c context.Context, biz string, phone string, inputCode string) (bool, error) {
 	ok, err := cs.repo.Verify(c, biz, phone, inputCode)
 	if err != nil {
 		return false, fmt.Errorf("code verify error. %w\n", err)
@@ -48,7 +53,7 @@ func (cs *CodeService) Verify(c context.Context, biz string, phone string, input
 	return ok, nil
 }
 
-func (cs *CodeService) generateCode() string {
+func (cs *SMSCodeService) generateCode() string {
 	// 随机生成六位数
 	num := rand.Intn(999999)
 	return fmt.Sprintf("%06d", num)

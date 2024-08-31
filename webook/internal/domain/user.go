@@ -12,6 +12,6 @@ type User struct {
 	Password string
 	Ctime    time.Time
 	NickName string
-	Birthday string
+	Birthday time.Time
 	Bio      string
 }

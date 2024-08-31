@@ -6,20 +6,25 @@ import (
 	"webook/internal/repository/cache"
 )
 
-type CodeRepository struct {
-	cache *cache.CodeCache
+type CodeRepository interface {
+	Store(c context.Context, biz string, phone string, code string) error
+	Verify(c context.Context, biz, phone, inputCode string) (bool, error)
 }
 
-func NewCodeRepository(c *cache.CodeCache) *CodeRepository {
-	return &CodeRepository{
+type CachedCodeRepository struct {
+	cache cache.CodeCache
+}
+
+func NewCodeRepository(c cache.CodeCache) CodeRepository {
+	return &CachedCodeRepository{
 		cache: c,
 	}
 }
 
-func (repo *CodeRepository) Store(c context.Context, biz string, phone string, code string) error {
+func (repo *CachedCodeRepository) Store(c context.Context, biz string, phone string, code string) error {
 	return repo.cache.Set(c, biz, phone, code)
 }
 
-func (repo *CodeRepository) Verify(c context.Context, biz, phone, inputCode string) (bool, error) {
+func (repo *CachedCodeRepository) Verify(c context.Context, biz, phone, inputCode string) (bool, error) {
 	return repo.cache.Verify(c, biz, phone, inputCode)
 }

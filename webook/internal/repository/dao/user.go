@@ -17,7 +17,15 @@ var (
 	ErrRecordNotFound = gorm.ErrRecordNotFound
 )
 
-type UserDAO struct {
+type UserDAO interface {
+	Insert(c context.Context, u User) error
+	UpdateNonZeroFields(ctx context.Context, u User) error
+	FindByEmail(c context.Context, email string) (User, error)
+	FindByUserId(c context.Context, uid int64) (User, error)
+	FindByUserPhone(c context.Context, phone string) (User, error)
+}
+
+type GormUserDAO struct {
 	db *gorm.DB
 }
 
@@ -26,13 +34,13 @@ type Address struct {
 	UserId int64
 }
 
-func NewUserDAO(db *gorm.DB) *UserDAO {
-	return &UserDAO{
+func NewUserDAO(db *gorm.DB) UserDAO {
+	return &GormUserDAO{
 		db: db,
 	}
 }
 
-func (ud *UserDAO) Insert(c context.Context, u User) error {
+func (ud *GormUserDAO) Insert(c context.Context, u User) error {
 	// 存毫秒数
 	now := time.Now().UnixMilli()
 	u.Utime = now
@@ -50,35 +58,28 @@ func (ud *UserDAO) Insert(c context.Context, u User) error {
 	return nil
 }
 
-func (ud *UserDAO) Update(c context.Context, uid interface{}, u User) error {
-	// 存毫秒数
-	now := time.Now().UnixMilli()
-	u.Utime = now
-
-	err := ud.db.WithContext(c).Where("id = ?", uid).Updates(u).Error
-	var mysqlErr *mysql.MySQLError
-	if errors.As(err, &mysqlErr) { // 类型断言
-		const uniqueIndexErrNo uint16 = 1062
-		if mysqlErr.Number == uniqueIndexErrNo {
-			return ErrUserDuplicate
-		}
-	}
-	return nil
+func (ud *GormUserDAO) UpdateNonZeroFields(c context.Context, u User) error {
+	// 这种写法是很不清晰的，因为它依赖了 gorm 的两个默认语义
+	// 会使用 ID 来作为 WHERE 条件
+	// 会使用非零值来更新
+	// 另外一种做法是显式指定只更新必要的字段，
+	// 那么这意味着 DAO 和 service 中非敏感字段语义耦合了
+	return ud.db.Updates(&u).Error
 }
 
-func (ud *UserDAO) FindByEmail(c context.Context, email string) (User, error) {
+func (ud *GormUserDAO) FindByEmail(c context.Context, email string) (User, error) {
 	var u User
 	err := ud.db.WithContext(c).Where("email = ?", email).First(&u).Error
 	return u, err
 }
 
-func (ud *UserDAO) FindByUserId(c context.Context, uid int64) (User, error) {
+func (ud *GormUserDAO) FindByUserId(c context.Context, uid int64) (User, error) {
 	var u User
 	err := ud.db.WithContext(c).Where("id = ?", uid).First(&u).Error
 	return u, err
 }
 
-func (ud *UserDAO) FindByUserPhone(c context.Context, phone string) (User, error) {
+func (ud *GormUserDAO) FindByUserPhone(c context.Context, phone string) (User, error) {
 	var u User
 	err := ud.db.WithContext(c).Where("phone = ?", phone).First(&u).Error
 	return u, err
