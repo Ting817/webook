@@ -17,14 +17,20 @@ import (
 
 const biz = "login"
 
+// 写法1 确保 UserHandler 上实现了 handler 接口
+var _ handler = &UserHandler{}
+
+// 写法2 这个更优雅
+var _ handler = (*UserHandler)(nil)
+
 type UserHandler struct {
-	svc         *service.UserService
-	codeSvc     *service.CodeService
+	svc         service.UserService
+	codeSvc     service.CodeService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 }
 
-func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
 	// 信息校验：正则表达式
 	const (
 		emailRegexPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
@@ -34,9 +40,9 @@ func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *Use
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None) // 预编译
 	return &UserHandler{
 		svc:         svc,
+		codeSvc:     codeSvc,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
-		codeSvc:     codeSvc,
 	}
 }
 
@@ -221,12 +227,13 @@ func (u *UserHandler) LogOut(c *gin.Context) {
 }
 
 func (u *UserHandler) Edit(c *gin.Context) {
-	type editReq struct {
+	// 注意，其它字段，尤其是密码、邮箱和手机, 修改都要通过别的手段, 邮箱和手机都要验证
+	type Req struct {
 		Nickname string `json:"nickname"`
 		Birthday string `json:"birthday"`
 		Bio      string `json:"bio"`
 	}
-	var req editReq
+	var req Req
 	if err := c.Bind(&req); err != nil {
 		_ = fmt.Errorf("edit fail. %w\n", err)
 		return
@@ -235,38 +242,45 @@ func (u *UserHandler) Edit(c *gin.Context) {
 	// 设置一些限制
 	const MaxNickNameLength = 30
 	const MaxBioLength = 300
+	if req.Nickname == "" {
+		c.JSON(http.StatusOK, Result{
+			Code: 4, Msg: "nickname can be empty.",
+		})
+	}
 	if len(req.Nickname) > MaxNickNameLength {
-		c.String(http.StatusOK, "nickname must be less than 30 characters.")
+		c.JSON(http.StatusOK, Result{
+			Code: 4, Msg: "nickname must be less than 30 characters.",
+		})
 		return
 	}
 	if len(req.Bio) > MaxBioLength {
-		c.String(http.StatusOK, "bio must be less than 300 characters.")
+		c.JSON(http.StatusOK, Result{
+			Code: 4, Msg: "bio must be less than 300 characters.",
+		})
 		return
 	}
-	birthdayRegex := regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`, regexp.None)
-	if ok, _ := birthdayRegex.MatchString(req.Birthday); !ok {
-		c.String(http.StatusOK, "birthday must be in the format YYYY-MM-DD.")
+	birthday, err := time.Parse(time.DateOnly, req.Birthday)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 4, Msg: "birthday must be in the format YYYY-MM-DD.",
+		})
 		return
 	}
-
-	uid := sessions.Default(c).Get("userId").(int64)
-	err := u.svc.Edit(c, uid, domain.User{
+	uc := c.MustGet("user").(UserClaims)
+	err = u.svc.UpdateNonSensitiveInfo(c, domain.User{
+		Id:       uc.Uid,
 		NickName: req.Nickname,
-		Birthday: req.Birthday,
+		Birthday: birthday,
 		Bio:      req.Bio,
 	})
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to update profile.")
+		c.JSON(http.StatusOK, Result{
+			Code: 4, Msg: "Failed to update profile.",
+		})
 		return
 	}
 
-	editJson := editReq{
-		Nickname: req.Nickname,
-		Birthday: req.Birthday,
-		Bio:      req.Bio,
-	}
-
-	c.JSON(http.StatusOK, gin.H{"Edit your profile in here...": editJson})
+	c.JSON(http.StatusOK, Result{Msg: "ok!"})
 }
 
 func (u *UserHandler) Profile(c *gin.Context) {
@@ -287,13 +301,26 @@ func (u *UserHandler) Profile(c *gin.Context) {
 }
 
 func (u *UserHandler) ProfileJWT(c *gin.Context) {
-	cl, _ := c.Get("claims")
-	claims, ok := cl.(*UserClaims) // 类型断言
-	if !ok {
-		c.String(http.StatusOK, "system error")
+	// 重新控制 profile 防止密码泄露
+	type Profile struct {
+		Email    string
+		Phone    string
+		Nickname string
+		Birthday string
+		Bio      string
 	}
-	fmt.Printf("claims.Uid-------->%v\n", claims.Uid)
-	c.String(http.StatusOK, "hi, here is profile.")
+	uc := c.MustGet("user").(UserClaims)
+	ucId, err := u.svc.Profile(c, uc.Uid) // 类型断言
+	if err != nil {
+		c.String(http.StatusOK, "system error"+err.Error())
+	}
+	c.JSON(http.StatusOK, Profile{
+		Email:    ucId.Email,
+		Phone:    ucId.Phone,
+		Nickname: ucId.NickName,
+		Birthday: ucId.Birthday.Format(time.DateOnly),
+		Bio:      ucId.Bio,
+	})
 }
 
 func (u *UserHandler) SendLoginSMSCode(c *gin.Context) {

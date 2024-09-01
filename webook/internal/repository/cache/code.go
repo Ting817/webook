@@ -14,17 +14,24 @@ var luaSetCode string
 //go:embed lua/verify_code.lua
 var luaVerifyCode string
 
-type CodeCache struct {
+type CodeCache interface {
+	Set(c context.Context, biz, phone, code string) error
+	Verify(c context.Context, biz, phone, inputCode string) (bool, error)
+}
+
+type RedisCodeCache struct {
 	client redis.Cmdable
 }
 
-func NewCodeCache(client redis.Cmdable) *CodeCache {
-	return &CodeCache{
+// 其实Go的最佳实践是返回具体类型，而不是返回接口。此处用了wire，所以用接口
+
+func NewCodeCache(client redis.Cmdable) CodeCache {
+	return &RedisCodeCache{
 		client: client,
 	}
 }
 
-func (cc *CodeCache) Set(c context.Context, biz, phone, code string) error {
+func (cc *RedisCodeCache) Set(c context.Context, biz, phone, code string) error {
 	res, err := cc.client.Eval(c, luaSetCode, []string{cc.key(biz, phone)}, code).Int()
 	if err != nil {
 		return fmt.Errorf("error. %w\n", err)
@@ -44,7 +51,7 @@ func (cc *CodeCache) Set(c context.Context, biz, phone, code string) error {
 // Verify 验证验证码
 // 如果验证码是一致的，那么删除
 // 如果验证码不一致，那么保留的
-func (cc *CodeCache) Verify(c context.Context, biz, phone, inputCode string) (bool, error) {
+func (cc *RedisCodeCache) Verify(c context.Context, biz, phone, inputCode string) (bool, error) {
 	res, err := cc.client.Eval(c, luaVerifyCode, []string{cc.key(biz, phone)}, inputCode).Int()
 	if err != nil {
 		return false, fmt.Errorf("error. %w\n", err)
@@ -60,6 +67,6 @@ func (cc *CodeCache) Verify(c context.Context, biz, phone, inputCode string) (bo
 	}
 }
 
-func (cc *CodeCache) key(biz, phone string) string {
+func (cc *RedisCodeCache) key(biz, phone string) string {
 	return fmt.Sprintf("phone_code: %s:%s", biz, phone)
 }
