@@ -83,6 +83,11 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 		return
 	}
 
+	if req.ConfirmPassword != req.Password {
+		c.String(http.StatusOK, "passwords do not match.")
+		return
+	}
+
 	ok, err = u.passwordExp.MatchString(req.Password)
 	if err != nil {
 		c.String(http.StatusOK, "system error.") // 不要暴露过多的内部细节
@@ -94,24 +99,18 @@ func (u *UserHandler) SignUp(c *gin.Context) {
 	}
 
 	// 调用一下svc的方法
-	if err = u.svc.SignUp(c, domain.User{
+	err = u.svc.SignUp(c, domain.User{
 		Email:    req.Email,
 		Password: req.Password,
-	}); err != nil {
-		c.String(http.StatusOK, "system error.")
-	}
+	})
 
-	if errors.Is(err, service.ErrUserDuplicate) {
-		c.String(http.StatusOK, "email conflict, please change another email.")
+	if err == service.ErrUserDuplicate {
+		c.String(http.StatusOK, "email conflict.")
 		return
 	}
+
 	if err != nil {
-		c.String(http.StatusOK, "system error, fail to sign up.")
-		return
-	}
-
-	if req.ConfirmPassword != req.Password {
-		c.String(http.StatusOK, "passwords do not match.")
+		c.String(http.StatusOK, "system error.")
 		return
 	}
 
@@ -335,17 +334,26 @@ func (u *UserHandler) SendLoginSMSCode(c *gin.Context) {
 	if req.Phone == "" {
 		c.JSON(http.StatusOK, Result{
 			Code: 4,
-			Msg:  "phone input error.",
+			Msg:  "phone input error",
 		})
 	}
 	err := u.codeSvc.Send(c, biz, req.Phone)
-	if err != nil {
+	switch err {
+	case nil:
+		c.JSON(http.StatusOK, Result{
+			Msg: "send code success!",
+		})
+	case service.ErrCodeSendTooMany:
+		c.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "code send too many, please try it again later",
+		})
+	default:
 		c.JSON(http.StatusOK, Result{
 			Code: 5,
-			Msg:  "system error!" + err.Error(),
+			Msg:  "system error",
 		})
 	}
-	c.JSON(http.StatusOK, "send code success!")
 }
 
 func (u *UserHandler) LoginSMS(c *gin.Context) {

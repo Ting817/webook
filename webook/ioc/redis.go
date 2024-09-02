@@ -18,11 +18,11 @@ func InitRedis() redis.Cmdable {
 	if err = toml.Unmarshal(fileContent, &config); err != nil {
 		log.Fatalf("error decoding toml file: %v", err)
 	}
-	rCfg := config.Redis
+	r := config.Redis
 	cmd := redis.NewClient(&redis.Options{
-		Addr: rCfg.Addr,
-		// Password: rCfg.Password,
-		// DB:       rCfg.DB,
+		Addr: r.Addr,
+		// Password: r.Password,
+		// DB:       r.DB,
 	})
 	return cmd
 }

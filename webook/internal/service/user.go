@@ -16,6 +16,7 @@ var (
 	ErrInvalidUserOrPassword = errors.New("user or password error")
 	ErrInvalidData           = repository.ErrInvalidData
 	ErrRecordNotFound        = repository.ErrRecordNotFound
+	ErrCodeSendTooMany       = repository.ErrCodeSendTooMany
 )
 
 type UserService interface {
@@ -74,7 +75,7 @@ func (svc *userService) FindOrCreate(c context.Context, phone string) (domain.Us
 func (svc *userService) Login(c context.Context, email, password string) (domain.User, error) {
 	// 先找用户
 	u, err := svc.repo.FindByEmail(c, email)
-	if errors.Is(err, repository.ErrUserNotFound) {
+	if err == repository.ErrUserNotFound {
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 
