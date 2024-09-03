@@ -13,10 +13,11 @@ import (
 )
 
 var (
-	ErrUserDuplicate  = dao.ErrUserDuplicate
-	ErrUserNotFound   = dao.ErrUserNotFound
-	ErrInvalidData    = dao.ErrInvalidData
-	ErrRecordNotFound = dao.ErrRecordNotFound
+	ErrUserDuplicate   = dao.ErrUserDuplicate
+	ErrUserNotFound    = dao.ErrUserNotFound
+	ErrInvalidData     = dao.ErrInvalidData
+	ErrRecordNotFound  = dao.ErrRecordNotFound
+	ErrCodeSendTooMany = dao.ErrCodeSendTooMany
 )
 
 type UserRepository interface {
@@ -61,9 +62,10 @@ func (r *CachedUserRepository) FindById(c context.Context, uid int64) (domain.Us
 	}
 	uu, err := r.dao.FindByUserId(c, uid)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("id can not be found. %w", err)
+		return domain.User{}, fmt.Errorf("id can not be found")
 	}
 	u = r.entityToDomain(uu)
+	// _ = r.cache.Set(c, u)
 	// 一致性
 	go func() {
 		err = r.cache.Set(c, u)
