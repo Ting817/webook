@@ -3,8 +3,6 @@ package tencent
 import (
 	"context"
 	"fmt"
-	"webook/pkg/ratelimit"
-
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/slice"
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
@@ -16,7 +14,7 @@ type Service struct {
 	client    *sms.Client
 }
 
-func NewService(client *sms.Client, appId string, signature string, limiter ratelimit.Limiter) *Service {
+func NewService(client *sms.Client, appId string, signature string) *Service {
 	return &Service{
 		client:    client,
 		appId:     ekit.ToPtr[string](appId),
@@ -24,11 +22,12 @@ func NewService(client *sms.Client, appId string, signature string, limiter rate
 	}
 }
 
-func (s *Service) Send(c context.Context, tplId string, args []string, numbers ...string) error {
+// biz 代表的是tplId
+func (s *Service) Send(c context.Context, biz string, args []string, numbers ...string) error {
 	req := sms.NewSendSmsRequest()
 	req.SmsSdkAppId = s.appId
 	req.SignName = s.signature
-	req.TemplateId = ekit.ToPtr[string](tplId)
+	req.TemplateId = ekit.ToPtr[string](biz)
 	req.PhoneNumberSet = s.toStringPtrSlice(numbers)
 	req.TemplateParamSet = s.toStringPtrSlice(args)
 	resp, err := s.client.SendSms(req)
