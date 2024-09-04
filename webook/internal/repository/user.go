@@ -27,6 +27,7 @@ type UserRepository interface {
 	FindById(c context.Context, uid int64) (domain.User, error)
 	FindByEmail(c context.Context, email string) (domain.User, error)
 	FindByPhone(c context.Context, phone string) (domain.User, error)
+	FindByWechat(c context.Context, openID string) (domain.User, error)
 }
 
 type CachedUserRepository struct {
@@ -83,16 +84,23 @@ func (r *CachedUserRepository) FindByEmail(c context.Context, email string) (dom
 	// SELECT * FROM `users` WHERE `email`=?
 	u, err := r.dao.FindByEmail(c, email)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("email can not be found. %w", err)
+		return domain.User{}, fmt.Errorf("email can not be found. %w" + err.Error())
 	}
 	return r.entityToDomain(u), nil
 }
 
 func (r *CachedUserRepository) FindByPhone(c context.Context, phone string) (domain.User, error) {
-	// SELECT * FROM `users` WHERE `email`=?
 	u, err := r.dao.FindByUserPhone(c, phone)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("phone not found. %w", err)
+		return domain.User{}, fmt.Errorf("phone not found. %w\n" + err.Error())
+	}
+	return r.entityToDomain(u), nil
+}
+
+func (r *CachedUserRepository) FindByWechat(c context.Context, openID string) (domain.User, error) {
+	u, err := r.dao.FindByWechat(c, openID)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("openID not found. %w\n" + err.Error())
 	}
 	return r.entityToDomain(u), nil
 }
@@ -110,6 +118,14 @@ func (r *CachedUserRepository) domainToEntity(u domain.User) dao.User {
 		},
 		Password: u.Password,
 		Ctime:    u.Ctime.UnixMilli(),
+		WechatOpenID: sql.NullString{
+			String: u.WechatInfo.OpenID,
+			Valid:  u.WechatInfo.OpenID != "",
+		},
+		WechatUnionID: sql.NullString{
+			String: u.WechatInfo.UnionID,
+			Valid:  u.WechatInfo.UnionID != "",
+		},
 	}
 }
 
@@ -120,5 +136,9 @@ func (r *CachedUserRepository) entityToDomain(u dao.User) domain.User {
 		Phone:    u.Phone.String,
 		Password: u.Password,
 		Ctime:    time.UnixMilli(u.Ctime),
+		WechatInfo: domain.WechatInfo{
+			OpenID:  u.WechatOpenID.String,
+			UnionID: u.WechatUnionID.String,
+		},
 	}
 }

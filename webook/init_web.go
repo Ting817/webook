@@ -11,13 +11,11 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"webook/web/middleware"
-
-	"webook/pkg/ginx/middlewares/ratelimit"
 )
 
 func initWebServer(redisCmd redis.Cmdable) *gin.Engine {
 	server := gin.Default()
-	server.Use(ratelimit.NewBuilder(redisCmd, time.Minute, 100).Build())
+	//server.Use(ratelimit.NewBuilder(redisCmd, time.Minute, 100).Build())
 	server.Use(corsHandler())
 	// 使用 session 机制登录
 	// usingSession(server)

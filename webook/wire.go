@@ -1,6 +1,6 @@
 //go:build wireinject
 
-package integration
+package main
 
 import (
 	"github.com/gin-gonic/gin"
@@ -17,7 +17,7 @@ import (
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 基础部分
-		ioc.InitDB, ioc.InitRedis,
+		ioc.NewCfg, ioc.InitDB, ioc.InitRedis,
 
 		// DAO 部分
 		dao.NewUserDAO,
@@ -29,10 +29,10 @@ func InitWebServer() *gin.Engine {
 		repository.NewUserRepository, repository.NewCodeRepository,
 
 		// service 部分
-		ioc.InitSmsService, service.NewUserService, service.NewSMSCodeService,
+		ioc.InitSmsService, ioc.InitWechatService, service.NewUserService, service.NewSMSCodeService,
 
 		// handler 部分
-		web.NewUserHandler,
+		web.NewUserHandler, web.NewOAuth2WechatHandler,
 
 		// gin 的中间件
 		ioc.InitMiddlewares,

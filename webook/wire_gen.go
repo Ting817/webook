@@ -4,7 +4,7 @@
 //go:build !wireinject
 // +build !wireinject
 
-package integration
+package main
 
 import (
 	"github.com/gin-gonic/gin"
@@ -19,9 +19,10 @@ import (
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
-	cmdable := ioc.InitRedis()
+	config := ioc.NewCfg()
+	cmdable := ioc.InitRedis(config)
 	v := ioc.InitMiddlewares(cmdable)
-	db := ioc.InitDB()
+	db := ioc.InitDB(config)
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
@@ -31,6 +32,8 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewSMSCodeService(smsService, codeRepository)
 	userHandler := web.NewUserHandler(userService, codeService)
-	engine := ioc.InitWebServer(v, userHandler)
+	wechatService := ioc.InitWechatService()
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
 	return engine
 }

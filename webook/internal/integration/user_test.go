@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"webook"
 
 	"github.com/stretchr/testify/assert"
 
@@ -16,7 +17,7 @@ import (
 )
 
 func TestUserHandler_e2e_SendLoginSMSCode(t *testing.T) {
-	server := InitWebServer()
+	server := main.InitWebServer()
 	rdb := ioc.InitRedis()
 	tests := []struct {
 		name    string

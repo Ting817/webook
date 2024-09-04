@@ -1,38 +1,40 @@
 package ioc
 
 import (
-	"strings"
-	"time"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"strings"
+	"time"
 
-	"webook/pkg/ginx/middlewares/ratelimit"
 	"webook/web"
 	"webook/web/middleware"
 )
 
-func InitWebServer(mdls []gin.HandlerFunc, hdl *web.UserHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WechatHdl *web.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
 	hdl.RegisterRoutes(server)
+	oauth2WechatHdl.RegisterRoutes(server)
 	return server
 }
 
 func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
-		ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
+		//ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
 
 		// 使用 JWT
 		middleware.NewLoginJWTMiddlewareBuilder().
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
 			IgnorePaths("/users/login_sms/code/send").
-			IgnorePaths("/users/login_sms").Build(),
+			IgnorePaths("/users/login_sms").
+			IgnorePaths("/oauth2/wechat/authurl").
+			IgnorePaths("/oauth2/wechat/callback").
+			Build(),
 
 		// 使用session 登录校验
 		// sessionHandlerFunc(),
