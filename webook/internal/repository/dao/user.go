@@ -24,6 +24,7 @@ type UserDAO interface {
 	FindByEmail(c context.Context, email string) (User, error)
 	FindByUserId(c context.Context, uid int64) (User, error)
 	FindByUserPhone(c context.Context, phone string) (User, error)
+	FindByWechat(c context.Context, openID string) (User, error)
 }
 
 type GormUserDAO struct {
@@ -86,6 +87,12 @@ func (ud *GormUserDAO) FindByUserPhone(c context.Context, phone string) (User, e
 	return u, err
 }
 
+func (ud *GormUserDAO) FindByWechat(c context.Context, openID string) (User, error) {
+	var u User
+	err := ud.db.WithContext(c).Where("wechat_open_id = ?", openID).First(&u).Error
+	return u, err
+}
+
 // User 直接对应数据库表结构
 // 有人叫entity/model/PO(persistent object)
 type User struct {
@@ -98,4 +105,7 @@ type User struct {
 	NickName string         `json:"nickName,omitempty"`
 	Birthday string         `json:"birthday,omitempty"`
 	Bio      string         `json:"bio,omitempty"`
+
+	WechatOpenID  sql.NullString `gorm:"unique"`
+	WechatUnionID sql.NullString
 }

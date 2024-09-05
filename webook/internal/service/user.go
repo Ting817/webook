@@ -26,7 +26,8 @@ type UserService interface {
 	Edit(c context.Context, uid int64, u domain.User) error
 	Profile(c context.Context, uid int64) (domain.User, error)
 	// UpdateNonSensitiveInfo 更新非敏感数据
-	UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error
+	UpdateNonSensitiveInfo(c context.Context, user domain.User) error
+	FindOrCreateByWechat(c context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
 }
 
 type userService struct {
@@ -70,6 +71,29 @@ func (svc *userService) FindOrCreate(c context.Context, phone string) (domain.Us
 
 	// 这里会遇到主从延迟的问题
 	return svc.repo.FindByPhone(c, phone)
+}
+
+func (svc *userService) FindOrCreateByWechat(c context.Context, info domain.WechatInfo) (domain.User, error) {
+	// 快路径
+	u, err := svc.repo.FindByWechat(c, info.OpenID)
+	if err != nil {
+		return u, fmt.Errorf("user find by phone failed. %w\n", err)
+	}
+	if c.Value("降级") == "true" {
+		return domain.User{}, fmt.Errorf("系统降级了. %w\n", err)
+	}
+	// 慢路径
+	// 如果没有这个用户
+	u = domain.User{
+		WechatInfo: info,
+	}
+	err = svc.repo.Create(c, u)
+	if err != nil && !errors.Is(err, repository.ErrUserDuplicate) {
+		return u, fmt.Errorf("create user by phone failed. %w\n", err)
+	}
+
+	// 这里会遇到主从延迟的问题
+	return svc.repo.FindByWechat(c, info.OpenID)
 }
 
 func (svc *userService) Login(c context.Context, email, password string) (domain.User, error) {
