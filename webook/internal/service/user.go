@@ -74,16 +74,11 @@ func (svc *userService) FindOrCreate(c context.Context, phone string) (domain.Us
 }
 
 func (svc *userService) FindOrCreateByWechat(c context.Context, info domain.WechatInfo) (domain.User, error) {
-	// 快路径
 	u, err := svc.repo.FindByWechat(c, info.OpenID)
 	if err != nil {
-		return u, fmt.Errorf("user find by phone failed. %w\n", err)
+		return u, fmt.Errorf("openID find by wechat failed. %w\n", err)
 	}
-	if c.Value("降级") == "true" {
-		return domain.User{}, fmt.Errorf("系统降级了. %w\n", err)
-	}
-	// 慢路径
-	// 如果没有这个用户
+
 	u = domain.User{
 		WechatInfo: info,
 	}
