@@ -3,6 +3,7 @@ package ioc
 import (
 	"os"
 	"webook/internal/service/oauth2/wechat"
+	"webook/web"
 )
 
 func InitWechatService() wechat.Service {
@@ -15,4 +16,10 @@ func InitWechatService() wechat.Service {
 		panic("Not found env WECHAT_APP_SECRET")
 	}
 	return wechat.NewService(appId, appKey)
+}
+
+func NewWechatHandlerConfig() web.WechatHandlerConfig {
+	return web.WechatHandlerConfig{
+		Secure: false,
+	}
 }
