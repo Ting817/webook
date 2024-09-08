@@ -17,6 +17,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/sessions v1.4.0
+	github.com/hashicorp/golang-lru v1.0.2
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/pelletier/go-toml/v2 v2.2.2
 	github.com/redis/go-redis/v9 v9.6.1
