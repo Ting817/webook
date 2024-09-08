@@ -2,23 +2,25 @@ package middleware
 
 import (
 	"encoding/gob"
-	"log"
+	"github.com/redis/go-redis/v9"
 	"net/http"
-	"strings"
 	"time"
+	ijwt "webook/web/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-
-	"webook/web"
 )
 
 type LoginJWTMiddlewareBuilder struct {
 	paths []string
+	cmd   redis.Cmdable
+	ijwt.Handler
 }
 
-func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{}
+func NewLoginJWTMiddlewareBuilder(jwtHdl ijwt.Handler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		Handler: jwtHdl,
+	}
 }
 
 func (l *LoginJWTMiddlewareBuilder) IgnorePaths(path string) *LoginJWTMiddlewareBuilder {
@@ -36,25 +38,9 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 				return
 			}
 		}
-		// 用 JWT 来登录校验
-		tokenHeader := c.GetHeader("Authorization")
 
-		// 情况1：没带token
-		if tokenHeader == "" {
-			// 没登录
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		// 情况2: 带了token，但格式/内容不对
-		// segs := strings.SplitN(tokenHeader, " ", 2)
-		segs := strings.Split(tokenHeader, " ")
-		if len(segs) != 2 {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-		tokenStr := segs[1]
-		claims := &web.UserClaims{}
+		tokenStr := l.ExtractToken(c)
+		claims := &ijwt.UserClaims{}
 		// ParseWithClaims 里一定要传入 claims 指针，会被解析出来
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"), nil
@@ -77,15 +63,12 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		// 登录刷新 每10s刷新一次 (jwt有效期1min)
-		now := time.Now()
-		if claims.ExpiresAt.Sub(now) < time.Second*50 {
-			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
-			tokenStr, err = token.SignedString([]byte("Cb3cErlIjTEzfHwr6uhsMZ8On5s5EMPK"))
-			if err != nil {
-				log.Println("jwt 续约失败", err)
-			}
-			c.Header("x-jwt-token", tokenStr)
+
+		err = l.CheckSession(c, claims.Ssid)
+		if err != nil {
+			// 要么 redis 有问题，要么已经退出了登录
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 
 		c.Set("claims", claims)

@@ -8,6 +8,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
+	ijwt "webook/web/jwt"
 
 	"webook/web"
 	"webook/web/middleware"
@@ -21,15 +22,16 @@ func InitWebServer(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WechatHdl
 	return server
 }
 
-func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
 		//ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
 
 		// 使用 JWT
-		middleware.NewLoginJWTMiddlewareBuilder().
+		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login").
+			IgnorePaths("/users/refresh_token").
 			IgnorePaths("/users/login_sms/code/send").
 			IgnorePaths("/users/login_sms").
 			IgnorePaths("/oauth2/wechat/authurl").
@@ -49,7 +51,7 @@ func corsHdl() gin.HandlerFunc {
 		// AllowOrigins: []string{"http://localhost:3000"},
 		AllowPrivateNetwork: true,
 		AllowHeaders:        []string{"Content-Type", "Authorization"},
-		ExposeHeaders:       []string{"x-jwt-token"}, // 给前端token
+		ExposeHeaders:       []string{"x-jwt-token", "x-refresh-token"}, // 给前端token
 		AllowOriginFunc: func(origin string) bool {
 			if strings.HasPrefix(origin, "http://localhost") {
 				return true
