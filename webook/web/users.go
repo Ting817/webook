@@ -3,6 +3,8 @@ package web
 import (
 	"errors"
 	"fmt"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"webook/internal/domain"
 	"webook/internal/service"
+	ijwt "webook/web/jwt"
 )
 
 const biz = "login"
@@ -22,14 +25,15 @@ var _ handler = &UserHandler{}
 var _ handler = (*UserHandler)(nil)
 
 type UserHandler struct {
-	svc         service.UserService
-	codeSvc     service.CodeService
-	emailExp    *regexp.Regexp
-	passwordExp *regexp.Regexp
-	jwtHandler  // 组合法
+	svc          service.UserService
+	codeSvc      service.CodeService
+	emailExp     *regexp.Regexp
+	passwordExp  *regexp.Regexp
+	ijwt.Handler // 组合法
+	cmd          redis.Cmdable
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl ijwt.Handler) *UserHandler {
 	// 信息校验：正则表达式
 	const (
 		emailRegexPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
@@ -42,6 +46,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		codeSvc:     codeSvc,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
+		Handler:     jwtHdl,
 	}
 }
 
@@ -50,11 +55,13 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	s.POST("/signup", u.SignUp) // 注册
 	// s.POST("/login", u.Login)   // 登录
 	s.POST("/login", u.LoginJWT) // 通过JWT登录
-	s.POST("/edit", u.Edit)      // 编辑
+	s.POST("logout", u.LogOut)
+	s.POST("/edit", u.Edit) // 编辑
 	// s.GET("/profile", u.Profile)
 	s.GET("/profile", u.ProfileJWT)
 	s.POST("/login_sms/code/send", u.SendLoginSMSCode)
 	s.POST("/login_sms", u.LoginSMS)
+	s.POST("/refresh_token", u.RefreshToken)
 }
 
 // SignUp 注册
@@ -177,7 +184,7 @@ func (u *UserHandler) LoginJWT(c *gin.Context) {
 		return
 	}
 
-	if err = u.setJWTToken(c, user.Id); err != nil {
+	if err = u.SetLoginToken(c, user.Id); err != nil {
 		c.String(http.StatusOK, "system error,"+err.Error())
 		return
 	}
@@ -196,6 +203,20 @@ func (u *UserHandler) LogOut(c *gin.Context) {
 	})
 	sess.Save()
 	c.String(http.StatusOK, "log out success!")
+}
+
+func (u *UserHandler) LogoutJWT(c *gin.Context) {
+	err := u.ClearToken(c)
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "退出登录失败",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, Result{
+		Msg: "退出登录OK",
+	})
 }
 
 func (u *UserHandler) Edit(c *gin.Context) {
@@ -238,7 +259,7 @@ func (u *UserHandler) Edit(c *gin.Context) {
 		})
 		return
 	}
-	uc := c.MustGet("user").(UserClaims)
+	uc := c.MustGet("user").(ijwt.UserClaims)
 	err = u.svc.UpdateNonSensitiveInfo(c, domain.User{
 		Id:       uc.Uid,
 		NickName: req.Nickname,
@@ -281,7 +302,7 @@ func (u *UserHandler) ProfileJWT(c *gin.Context) {
 		Birthday string
 		Bio      string
 	}
-	uc := c.MustGet("user").(UserClaims)
+	uc := c.MustGet("user").(ijwt.UserClaims)
 	ucId, err := u.svc.Profile(c, uc.Uid) // 类型断言
 	if err != nil {
 		c.String(http.StatusOK, "system error"+err.Error())
@@ -329,6 +350,39 @@ func (u *UserHandler) SendLoginSMSCode(c *gin.Context) {
 	}
 }
 
+// 可以同时刷新长短 token, 用 redis 来记录是否有效，即 refresh_token 是一次性的。可以参考登录校验部分，比较 User-Agent 来增强安全性
+func (u *UserHandler) RefreshToken(c *gin.Context) {
+	// 只有这个接口拿出来的才是 refresh_token, 其他地方都是access_token/短token
+	refreshToken := u.ExtractToken(c)
+	var rc ijwt.RefreshClaims
+	token, err := jwt.ParseWithClaims(refreshToken, &rc, func(token *jwt.Token) (interface{}, error) {
+		return ijwt.RtKey, nil
+	})
+	// 保持和登录校验一直的逻辑，即返回 401 响应
+	if err != nil || !token.Valid {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = u.CheckSession(c, rc.Ssid)
+	if err != nil {
+		// 要么 redis 有问题，要么已经退出了登录
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	// 搞个新的 access_token
+	err = u.SetJWTToken(c, rc.Uid, rc.Ssid)
+	if err != nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	c.JSON(http.StatusOK, Result{
+		Msg: "refresh success!",
+	})
+}
+
 func (u *UserHandler) LoginSMS(c *gin.Context) {
 	type Req struct {
 		Phone string `json:"phone"`
@@ -363,10 +417,10 @@ func (u *UserHandler) LoginSMS(c *gin.Context) {
 		return
 	}
 
-	if err = u.setJWTToken(c, user.Id); err != nil {
+	if err = u.SetLoginToken(c, user.Id); err != nil {
 		c.JSON(http.StatusOK, Result{
 			Code: 5,
-			Msg:  "set jwt token error!" + err.Error(),
+			Msg:  "set login token error!" + err.Error(),
 		})
 		return
 	}

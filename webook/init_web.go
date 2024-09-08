@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"time"
+	ijwt "webook/web/jwt"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
@@ -13,14 +14,14 @@ import (
 	"webook/web/middleware"
 )
 
-func initWebServer(redisCmd redis.Cmdable) *gin.Engine {
+func initWebServer(redisCmd redis.Cmdable, jwtHdl ijwt.Handler) *gin.Engine {
 	server := gin.Default()
 	//server.Use(ratelimit.NewBuilder(redisCmd, time.Minute, 100).Build())
 	server.Use(corsHandler())
 	// 使用 session 机制登录
 	// usingSession(server)
 	// 使用 JWT
-	usingJWT(server)
+	usingJWT(server, jwtHdl)
 	// 注册路由
 	return server
 }
@@ -42,8 +43,8 @@ func corsHandler() gin.HandlerFunc {
 	})
 }
 
-func usingJWT(server *gin.Engine) {
-	mldBd := middleware.NewLoginJWTMiddlewareBuilder()
+func usingJWT(server *gin.Engine, jwtHdl ijwt.Handler) {
+	mldBd := middleware.NewLoginJWTMiddlewareBuilder(jwtHdl)
 	server.Use(mldBd.Build())
 }
 

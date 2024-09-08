@@ -9,6 +9,7 @@ import (
 	"time"
 	"webook/internal/service"
 	"webook/internal/service/oauth2/wechat"
+	ijwt "webook/web/jwt"
 )
 
 type StateClaims struct {
@@ -23,17 +24,18 @@ type WechatHandlerConfig struct {
 type OAuth2WechatHandler struct {
 	svc     wechat.Service
 	userSvc service.UserService
-	jwtHandler
+	ijwt.Handler
 	stateKey []byte
 	cfg      WechatHandlerConfig
 }
 
-func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService, cfg WechatHandlerConfig) *OAuth2WechatHandler {
+func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService, cfg WechatHandlerConfig, jwtHdl ijwt.Handler) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
 		svc:      svc,
 		userSvc:  userSvc,
 		stateKey: []byte("Cb3cErlIjTEzxHwr6uhsMZ8On5s5EMPK"),
 		cfg:      cfg,
+		Handler:  jwtHdl,
 	}
 }
 
@@ -110,7 +112,8 @@ func (h *OAuth2WechatHandler) Callback(c *gin.Context) {
 		})
 		return
 	}
-	err = h.setJWTToken(c, u.Id)
+
+	err = h.SetLoginToken(c, u.Id)
 	if err != nil {
 		c.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -118,6 +121,7 @@ func (h *OAuth2WechatHandler) Callback(c *gin.Context) {
 		})
 		return
 	}
+
 	c.JSON(http.StatusOK, Result{
 		Msg: "come here!",
 	}) // 确认拿到 wechat 的 code

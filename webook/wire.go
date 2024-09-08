@@ -5,6 +5,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	ijwt "webook/web/jwt"
 
 	"webook/internal/repository"
 	"webook/internal/repository/cache"
@@ -32,7 +33,7 @@ func InitWebServer() *gin.Engine {
 		ioc.InitSmsService, ioc.InitWechatService, service.NewUserService, service.NewSMSCodeService,
 
 		// handler 部分
-		web.NewUserHandler, web.NewOAuth2WechatHandler, ioc.NewWechatHandlerConfig,
+		web.NewUserHandler, web.NewOAuth2WechatHandler, ioc.NewWechatHandlerConfig, ijwt.NewRedisJWTHandler,
 
 		// gin 的中间件
 		ioc.InitMiddlewares,
