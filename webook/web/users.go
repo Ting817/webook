@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 
@@ -368,6 +369,8 @@ func (u *UserHandler) RefreshToken(c *gin.Context) {
 	if err != nil {
 		// 要么 redis 有问题，要么已经退出了登录
 		c.AbortWithStatus(http.StatusUnauthorized)
+		zap.L().Error("set JWT token error", zap.Error(err), zap.String("method", "UserHandler:RefreshToken")) // 更详细
+		zap.L().Error("set JWT token error", zap.Error(err))
 		return
 	}
 
@@ -396,8 +399,11 @@ func (u *UserHandler) LoginSMS(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusOK, Result{
 			Code: 5,
-			Msg:  "system error!" + err.Error(),
+			Msg:  "system error!",
 		})
+		zap.L().Error("varify code error", zap.Error(err))
+		// 手机号码为敏感信息，不可以在日志中打印出来，但可以在 Debug 中打出来，线上不会打 Debug 级别。但理论上也别打出来
+		//zap.L().Debug("", zap.String("phone", req.Phone))
 		return
 	}
 	if !ok {

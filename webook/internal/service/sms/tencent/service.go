@@ -3,7 +3,8 @@ package tencent
 import (
 	"context"
 	"fmt"
-  
+	"go.uber.org/zap"
+
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/slice"
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
@@ -23,7 +24,7 @@ func NewService(client *sms.Client, appId string, signature string) *Service {
 	}
 }
 
-// biz 代表的是tplId
+// Send biz 代表的是tplId
 func (s *Service) Send(c context.Context, biz string, args []string, numbers ...string) error {
 	req := sms.NewSendSmsRequest()
 	req.SmsSdkAppId = s.appId
@@ -32,6 +33,9 @@ func (s *Service) Send(c context.Context, biz string, args []string, numbers ...
 	req.PhoneNumberSet = s.toStringPtrSlice(numbers)
 	req.TemplateParamSet = s.toStringPtrSlice(args)
 	resp, err := s.client.SendSms(req)
+	zap.L().Debug("调用腾讯短信服务",
+		zap.Any("req", req),
+		zap.Any("resp", resp))
 	if err != nil {
 		return fmt.Errorf("error.%w\n", err)
 	}

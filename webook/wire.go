@@ -18,7 +18,7 @@ import (
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 基础部分
-		ioc.NewCfg, ioc.InitDB, ioc.InitRedis,
+		ioc.NewCfg, ioc.InitDB, ioc.InitRedis, ioc.InitLogger,
 
 		// DAO 部分
 		dao.NewUserDAO,
