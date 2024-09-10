@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-
 	"github.com/redis/go-redis/v9"
 )
 
@@ -41,6 +40,9 @@ func (cc *RedisCodeCache) Set(c context.Context, biz, phone, code string) error 
 	case 0:
 		return nil
 	case -1:
+		// 要注意 phone 不能直接记，要脱敏123xxxx286，或加密
+		// 要在对应的告警系统里配置，比如说规则，一分钟内出现100次 Warn, 则告警
+		//zap.L().Warn("code send too many", zap.String("biz", biz), zap.String("phone", phone))
 		return fmt.Errorf("code send too many. %w\n", err)
 	default:
 		// 系统错误，比如说 -2，是 key 冲突

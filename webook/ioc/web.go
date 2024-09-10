@@ -1,6 +1,7 @@
 package ioc
 
 import (
+	"context"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
@@ -8,6 +9,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
+	"webook/pkg/logger"
+	"webook/pkg/middlewares/accesslog"
 	ijwt "webook/web/jwt"
 
 	"webook/web"
@@ -22,11 +25,19 @@ func InitWebServer(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WechatHdl
 	return server
 }
 
-func InitMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler, l logger.LoggerV1) []gin.HandlerFunc {
+
+	bd := accesslog.NewMiddlewareBuilder(func(c context.Context, al accesslog.AccessLog) {
+		l.Debug("Gin 收到请求", logger.Field{
+			Key:   "req",
+			Value: al,
+		})
+	}).AllowReqBody(true).AllowRespBody()
+
 	return []gin.HandlerFunc{
 		corsHdl(),
 		//ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
-
+		bd.Build(),
 		// 使用 JWT
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").

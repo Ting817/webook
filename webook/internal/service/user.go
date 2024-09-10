@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"webook/pkg/logger"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -32,11 +33,13 @@ type UserService interface {
 
 type userService struct {
 	repo repository.UserRepository
+	l    logger.LoggerV1
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
+func NewUserService(repo repository.UserRepository, l logger.LoggerV1) UserService {
 	return &userService{
 		repo: repo,
+		l:    l,
 	}
 }
 
@@ -56,6 +59,11 @@ func (svc *userService) FindOrCreate(c context.Context, phone string) (domain.Us
 	if err != nil {
 		return u, fmt.Errorf("user find by phone failed. %w\n", err)
 	}
+	//zap.L().Info("user not sign up", zap.String("phone", phone)) // 手机号要先脱敏
+	svc.l.Info("user not sign up", logger.Field{
+		Key:   "phone",
+		Value: phone,
+	})
 	if c.Value("降级") == "true" {
 		return domain.User{}, fmt.Errorf("系统降级了. %w\n", err)
 	}

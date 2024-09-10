@@ -26,7 +26,7 @@ func (l *LocalCodeCache) Set(ctx context.Context, biz string, phone string, code
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	// 这里可以考虑用读写锁来优化，但是效果不会很好
-	// 因为你可以预期，大部分时候是要走到写锁里面的
+	// 因为可以预期，大部分时候是要走到写锁里面的
 
 	// 我选用的本地缓存，很不幸的是，没有获得过期时间的接口，所以都是自己维持了一个过期时间字段
 	key := l.key(biz, phone)
@@ -44,7 +44,7 @@ func (l *LocalCodeCache) Set(ctx context.Context, biz string, phone string, code
 	itm, ok := val.(codeItem)
 	if !ok {
 		// 理论上来说这是不可能的
-		return errors.New("系统错误")
+		return errors.New("System error. ")
 	}
 	if itm.expire.Sub(now) > time.Minute*9 {
 		// 不到一分钟
