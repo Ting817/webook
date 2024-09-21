@@ -9,7 +9,7 @@ import (
 	"time"
 	"webook/internal/service"
 	"webook/internal/service/oauth2/wechat"
-	ijwt "webook/web/jwt"
+	ijwt "webook/internal/web/jwt"
 )
 
 type StateClaims struct {

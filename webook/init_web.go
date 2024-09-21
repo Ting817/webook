@@ -1,17 +1,15 @@
 package main
 
 import (
-	"strings"
-	"time"
-	ijwt "webook/web/jwt"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-
-	"webook/web/middleware"
+	"strings"
+	"time"
+	ijwt "webook/internal/web/jwt"
+	middleware2 "webook/internal/web/middleware"
 )
 
 func initWebServer(redisCmd redis.Cmdable, jwtHdl ijwt.Handler) *gin.Engine {
@@ -44,7 +42,7 @@ func corsHandler() gin.HandlerFunc {
 }
 
 func usingJWT(server *gin.Engine, jwtHdl ijwt.Handler) {
-	mldBd := middleware.NewLoginJWTMiddlewareBuilder(jwtHdl)
+	mldBd := middleware2.NewLoginJWTMiddlewareBuilder(jwtHdl)
 	server.Use(mldBd.Build())
 }
 
@@ -71,6 +69,6 @@ func usingSession(server *gin.Engine) {
 	// cookie 的名字叫做ssid
 	server.Use(sessions.Sessions("ssid", store))
 	// 登录校验
-	login := middleware.NewLoginMiddlewareBuilder()
+	login := middleware2.NewLoginMiddlewareBuilder()
 	server.Use(login.Build())
 }

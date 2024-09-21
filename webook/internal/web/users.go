@@ -8,13 +8,13 @@ import (
 	"go.uber.org/zap"
 	"net/http"
 	"time"
+	jwt2 "webook/internal/web/jwt"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"webook/internal/domain"
 	"webook/internal/service"
-	ijwt "webook/web/jwt"
 )
 
 const biz = "login"
@@ -30,11 +30,11 @@ type UserHandler struct {
 	codeSvc      service.CodeService
 	emailExp     *regexp.Regexp
 	passwordExp  *regexp.Regexp
-	ijwt.Handler // 组合法
+	jwt2.Handler // 组合法
 	cmd          redis.Cmdable
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl ijwt.Handler) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl jwt2.Handler) *UserHandler {
 	// 信息校验：正则表达式
 	const (
 		emailRegexPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
@@ -260,7 +260,7 @@ func (u *UserHandler) Edit(c *gin.Context) {
 		})
 		return
 	}
-	uc := c.MustGet("user").(ijwt.UserClaims)
+	uc := c.MustGet("user").(jwt2.UserClaims)
 	err = u.svc.UpdateNonSensitiveInfo(c, domain.User{
 		Id:       uc.Uid,
 		NickName: req.Nickname,
@@ -303,7 +303,7 @@ func (u *UserHandler) ProfileJWT(c *gin.Context) {
 		Birthday string
 		Bio      string
 	}
-	uc := c.MustGet("user").(ijwt.UserClaims)
+	uc := c.MustGet("user").(jwt2.UserClaims)
 	ucId, err := u.svc.Profile(c, uc.Uid) // 类型断言
 	if err != nil {
 		c.String(http.StatusOK, "system error"+err.Error())
@@ -355,9 +355,9 @@ func (u *UserHandler) SendLoginSMSCode(c *gin.Context) {
 func (u *UserHandler) RefreshToken(c *gin.Context) {
 	// 只有这个接口拿出来的才是 refresh_token, 其他地方都是access_token/短token
 	refreshToken := u.ExtractToken(c)
-	var rc ijwt.RefreshClaims
+	var rc jwt2.RefreshClaims
 	token, err := jwt.ParseWithClaims(refreshToken, &rc, func(token *jwt.Token) (interface{}, error) {
-		return ijwt.RtKey, nil
+		return jwt2.RtKey, nil
 	})
 	// 保持和登录校验一直的逻辑，即返回 401 响应
 	if err != nil || !token.Valid {
