@@ -9,15 +9,14 @@ import (
 	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
+	web2 "webook/internal/web"
+	ijwt "webook/internal/web/jwt"
+	"webook/internal/web/middleware"
 	"webook/pkg/logger"
 	"webook/pkg/middlewares/accesslog"
-	ijwt "webook/web/jwt"
-
-	"webook/web"
-	"webook/web/middleware"
 )
 
-func InitWebServer(mdls []gin.HandlerFunc, hdl *web.UserHandler, oauth2WechatHdl *web.OAuth2WechatHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, hdl *web2.UserHandler, oauth2WechatHdl *web2.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
 	hdl.RegisterRoutes(server)

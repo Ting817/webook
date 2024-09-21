@@ -3,7 +3,7 @@ package ioc
 import (
 	"os"
 	"webook/internal/service/oauth2/wechat"
-	"webook/web"
+	"webook/internal/web"
 )
 
 func InitWechatService() wechat.Service {

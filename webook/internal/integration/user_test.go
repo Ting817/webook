@@ -9,16 +9,17 @@ import (
 	"testing"
 	"time"
 	"webook"
+	"webook/internal/web"
 
 	"github.com/stretchr/testify/assert"
 
 	"webook/ioc"
-	"webook/web"
 )
 
 func TestUserHandler_e2e_SendLoginSMSCode(t *testing.T) {
 	server := main.InitWebServer()
-	rdb := ioc.InitRedis()
+	c := ioc.NewCfg()
+	rdb := ioc.InitRedis(c)
 	tests := []struct {
 		name    string
 		before  func(t *testing.T)

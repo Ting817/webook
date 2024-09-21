@@ -99,6 +99,21 @@ func (mr *MockUserRepositoryMockRecorder) FindByPhone(c, phone any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByPhone", reflect.TypeOf((*MockUserRepository)(nil).FindByPhone), c, phone)
 }
 
+// FindByWechat mocks base method.
+func (m *MockUserRepository) FindByWechat(c context.Context, openID string) (domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByWechat", c, openID)
+	ret0, _ := ret[0].(domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindByWechat indicates an expected call of FindByWechat.
+func (mr *MockUserRepositoryMockRecorder) FindByWechat(c, openID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByWechat", reflect.TypeOf((*MockUserRepository)(nil).FindByWechat), c, openID)
+}
+
 // Update mocks base method.
 func (m *MockUserRepository) Update(c context.Context, u domain.User) error {
 	m.ctrl.T.Helper()

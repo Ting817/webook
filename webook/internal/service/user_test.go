@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 	"time"
+	"webook/pkg/logger"
 
 	"github.com/go-playground/assert/v2"
 	"go.uber.org/mock/gomock"
@@ -23,6 +24,7 @@ func Test_userService_Login(t *testing.T) {
 		c        context.Context
 		email    string
 		password string
+		l        logger.LoggerV1
 		wantUser domain.User
 		wantErr  error
 	}{
@@ -92,7 +94,7 @@ func Test_userService_Login(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			svc := NewUserService(tt.mock(ctrl))
+			svc := NewUserService(tt.mock(ctrl), tt.l)
 			u, err := svc.Login(tt.c, tt.email, tt.password)
 			assert.Equal(t, tt.wantErr, err)
 			assert.Equal(t, tt.wantUser, u)

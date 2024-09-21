@@ -2,13 +2,12 @@ package middleware
 
 import (
 	"encoding/gob"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 	"net/http"
 	"time"
-	ijwt "webook/web/jwt"
-
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	ijwt "webook/internal/web/jwt"
 )
 
 type LoginJWTMiddlewareBuilder struct {

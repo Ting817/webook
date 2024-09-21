@@ -69,6 +69,21 @@ func (mr *MockUserServiceMockRecorder) FindOrCreate(c, phone any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOrCreate", reflect.TypeOf((*MockUserService)(nil).FindOrCreate), c, phone)
 }
 
+// FindOrCreateByWechat mocks base method.
+func (m *MockUserService) FindOrCreateByWechat(c context.Context, wechatInfo domain.WechatInfo) (domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindOrCreateByWechat", c, wechatInfo)
+	ret0, _ := ret[0].(domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindOrCreateByWechat indicates an expected call of FindOrCreateByWechat.
+func (mr *MockUserServiceMockRecorder) FindOrCreateByWechat(c, wechatInfo any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindOrCreateByWechat", reflect.TypeOf((*MockUserService)(nil).FindOrCreateByWechat), c, wechatInfo)
+}
+
 // Login mocks base method.
 func (m *MockUserService) Login(c context.Context, email, password string) (domain.User, error) {
 	m.ctrl.T.Helper()
@@ -114,15 +129,15 @@ func (mr *MockUserServiceMockRecorder) SignUp(c, u any) *gomock.Call {
 }
 
 // UpdateNonSensitiveInfo mocks base method.
-func (m *MockUserService) UpdateNonSensitiveInfo(ctx context.Context, user domain.User) error {
+func (m *MockUserService) UpdateNonSensitiveInfo(c context.Context, user domain.User) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateNonSensitiveInfo", ctx, user)
+	ret := m.ctrl.Call(m, "UpdateNonSensitiveInfo", c, user)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateNonSensitiveInfo indicates an expected call of UpdateNonSensitiveInfo.
-func (mr *MockUserServiceMockRecorder) UpdateNonSensitiveInfo(ctx, user any) *gomock.Call {
+func (mr *MockUserServiceMockRecorder) UpdateNonSensitiveInfo(c, user any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNonSensitiveInfo", reflect.TypeOf((*MockUserService)(nil).UpdateNonSensitiveInfo), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNonSensitiveInfo", reflect.TypeOf((*MockUserService)(nil).UpdateNonSensitiveInfo), c, user)
 }
