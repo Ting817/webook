@@ -16,17 +16,18 @@ import (
 	"webook/pkg/middlewares/accesslog"
 )
 
-func InitWebServer(mdls []gin.HandlerFunc, hdl *web2.UserHandler, oauth2WechatHdl *web2.OAuth2WechatHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, hdl *web2.UserHandler, oauth2WechatHdl *web2.OAuth2WechatHandler, articleHdl *web2.ArticleHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdls...)
 	hdl.RegisterRoutes(server)
 	oauth2WechatHdl.RegisterRoutes(server)
+	articleHdl.RegisterRoutes(server)
 	return server
 }
 
 func InitMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler, l logger.LoggerV1) []gin.HandlerFunc {
 
-	bd := accesslog.NewMiddlewareBuilder(func(c context.Context, al accesslog.AccessLog) {
+	bd := accesslog.NewMiddlewareBuilder(func(c context.Context, al *accesslog.AccessLog) {
 		l.Debug("Gin 收到请求", logger.Field{
 			Key:   "req",
 			Value: al,

@@ -4,148 +4,209 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/gin-gonic/gin"
-	"github.com/go-playground/assert/v2"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-
 	"webook/internal/domain"
 	"webook/internal/service"
 	svcmocks "webook/internal/service/mocks"
+	"webook/internal/web/jwt"
 )
 
+func TestEncrypt(t *testing.T) {
+	_ = NewUserHandler(nil, nil, nil)
+	password := "hello#world123"
+	encrypted, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = bcrypt.CompareHashAndPassword(encrypted, []byte(password))
+	assert.NoError(t, err)
+}
+
+func TestNil(t *testing.T) {
+	testTypeAssert(nil)
+}
+
+func testTypeAssert(c any) {
+	_, ok := c.(jwt.UserClaims)
+	println(ok)
+}
+
 func TestUserHandler_SignUp(t *testing.T) {
-	tests := []struct {
-		name     string
-		mock     func(ctrl *gomock.Controller) service.UserService
-		reqBody  string
+	testCases := []struct {
+		name string
+
+		mock func(ctrl *gomock.Controller) service.UserService
+
+		reqBody string
+
 		wantCode int
 		wantBody string
 	}{
 		{
-			name: "sign up success!",
+			name: "注册成功",
 			mock: func(ctrl *gomock.Controller) service.UserService {
 				usersvc := svcmocks.NewMockUserService(ctrl)
-				usersvc.EXPECT().SignUp(gomock.Any(), gomock.Any()).Return(nil) // 注册成功是 return nil
+				usersvc.EXPECT().SignUp(gomock.Any(), domain.User{
+					Email:    "123@qq.com",
+					Password: "hello#world123",
+				}).Return(nil)
+				// 注册成功是 return nil
 				return usersvc
 			},
+
 			reqBody: `
 {
 	"email": "123@qq.com",
-	"password": "hello@world123",
-	"confirmPassword": "hello@world123"
+	"password": "hello#world123",
+	"confirmPassword": "hello#world123"
 }
 `,
 			wantCode: http.StatusOK,
 			wantBody: "sign up success!",
 		},
 		{
-			name: "The email format is incorrect.",
+			name: "参数不对，bind 失败",
+			mock: func(ctrl *gomock.Controller) service.UserService {
+				usersvc := svcmocks.NewMockUserService(ctrl)
+				// 注册成功是 return nil
+				return usersvc
+			},
+
+			reqBody: `
+{
+	"email": "123@qq.com",
+	"password": "hello#world123"
+`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name: "你的邮箱格式不对",
 			mock: func(ctrl *gomock.Controller) service.UserService {
 				usersvc := svcmocks.NewMockUserService(ctrl)
 				return usersvc
 			},
+
 			reqBody: `
 {
-	"email": "123",
-	"password": "hello@world123",
-	"confirmPassword": "hello@world123"
+	"email": "123@q",
+	"password": "hello#world123",
+	"confirmPassword": "hello#world123"
 }
 `,
 			wantCode: http.StatusOK,
 			wantBody: "The email format is incorrect.",
 		},
 		{
-			name: "The password must be longer than 8 characters and include both numbers and special symbols.",
+			name: "两次输入密码不匹配",
 			mock: func(ctrl *gomock.Controller) service.UserService {
 				usersvc := svcmocks.NewMockUserService(ctrl)
 				return usersvc
 			},
+
 			reqBody: `
 {
 	"email": "123@qq.com",
-	"password": "hello",
-	"confirmPassword": "hello"
-}
-`,
-			wantCode: http.StatusOK,
-			wantBody: "The password must be longer than 8 characters and include both numbers and special symbols.",
-		},
-		{
-			name: "passwords do not match.",
-			mock: func(ctrl *gomock.Controller) service.UserService {
-				usersvc := svcmocks.NewMockUserService(ctrl)
-				return usersvc
-			},
-			reqBody: `
-{
-	"email": "123@qq.com",
-	"password": "hello@world1234",
-	"confirmPassword": "hello@wod123"
+	"password": "hello#world1234",
+	"confirmPassword": "hello#world123"
 }
 `,
 			wantCode: http.StatusOK,
 			wantBody: "passwords do not match.",
 		},
 		{
-			name: "email conflict.",
+			name: "密码格式不对",
 			mock: func(ctrl *gomock.Controller) service.UserService {
 				usersvc := svcmocks.NewMockUserService(ctrl)
-				usersvc.EXPECT().SignUp(gomock.Any(), gomock.Any()).Return(service.ErrUserDuplicate)
 				return usersvc
 			},
 			reqBody: `
 {
 	"email": "123@qq.com",
-	"password": "hello@world123",
-	"confirmPassword": "hello@world123"
+	"password": "hello123",
+	"confirmPassword": "hello123"
 }
 `,
 			wantCode: http.StatusOK,
-			wantBody: "email conflict.",
+			wantBody: "The password must be longer than 8 characters and include both numbers and special symbols.",
 		},
 		{
-			name: "system error.",
+			name: "邮箱冲突",
 			mock: func(ctrl *gomock.Controller) service.UserService {
 				usersvc := svcmocks.NewMockUserService(ctrl)
-				usersvc.EXPECT().SignUp(gomock.Any(), gomock.Any()).Return(errors.New("system error"))
+				usersvc.EXPECT().SignUp(gomock.Any(), domain.User{
+					Email:    "123@qq.com",
+					Password: "hello#world123",
+				}).Return(service.ErrUserDuplicateEmail)
+				// 注册成功是 return nil
 				return usersvc
 			},
+
 			reqBody: `
 {
 	"email": "123@qq.com",
-	"password": "hello@world123",
-	"confirmPassword": "hello@world123"
+	"password": "hello#world123",
+	"confirmPassword": "hello#world123"
+}
+`,
+			wantCode: http.StatusOK,
+			wantBody: "system error.",
+		},
+		{
+			name: "系统异常",
+			mock: func(ctrl *gomock.Controller) service.UserService {
+				usersvc := svcmocks.NewMockUserService(ctrl)
+				usersvc.EXPECT().SignUp(gomock.Any(), domain.User{
+					Email:    "123@qq.com",
+					Password: "hello#world123",
+				}).Return(errors.New("随便一个 error"))
+				// 注册成功是 return nil
+				return usersvc
+			},
+
+			reqBody: `
+{
+	"email": "123@qq.com",
+	"password": "hello#world123",
+	"confirmPassword": "hello#world123"
 }
 `,
 			wantCode: http.StatusOK,
 			wantBody: "system error.",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			usersvc := tt.mock(ctrl)
-			h := NewUserHandler(usersvc, nil)
 			server := gin.Default()
+			// 用不上 codeSvc
+			h := NewUserHandler(tc.mock(ctrl), nil, nil)
 			h.RegisterRoutes(server)
-			req, err := http.NewRequest(http.MethodPost, "/users/signup", bytes.NewBuffer([]byte(tt.reqBody)))
+
+			req, err := http.NewRequest(http.MethodPost,
+				"/users/signup", bytes.NewBuffer([]byte(tc.reqBody)))
 			require.NoError(t, err)
-			// 数据是json格式
+			// 数据是 JSON 格式
 			req.Header.Set("Content-Type", "application/json")
+			// 这里你就可以继续使用 req
 
 			resp := httptest.NewRecorder()
-			t.Log(resp)
-
+			// 这就是 HTTP 请求进去 GIN 框架的入口。
+			// 当你这样调用的时候，GIN 就会处理这个请求
+			// 响应写回到 resp 里
 			server.ServeHTTP(resp, req)
 
-			assert.Equal(t, tt.wantCode, resp.Code)
-			assert.Equal(t, tt.wantBody, resp.Body.String())
+			assert.Equal(t, tc.wantCode, resp.Code)
+			assert.Equal(t, tc.wantBody, resp.Body.String())
+
 		})
 	}
 }
@@ -158,6 +219,10 @@ func TestMock(t *testing.T) {
 
 	usersvc.EXPECT().SignUp(gomock.Any(), gomock.Any()).
 		Return(errors.New("mock error"))
+
+	//usersvc.EXPECT().SignUp(gomock.Any(), domain.User{
+	//	Email: "124@qq.com",
+	//}).Return(errors.New("mock error"))
 
 	err := usersvc.SignUp(context.Background(), domain.User{
 		Email: "123@qq.com",

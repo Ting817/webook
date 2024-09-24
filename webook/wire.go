@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"webook/internal/repository"
+	"webook/internal/repository/article"
 	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
 	"webook/internal/service"
@@ -17,22 +18,37 @@ import (
 func InitWebServer() *gin.Engine {
 	wire.Build(
 		// 基础部分
-		ioc.NewCfg, ioc.InitDB, ioc.InitRedis, ioc.InitLogger,
+		ioc.NewCfg,
+		ioc.InitDB,
+		ioc.InitRedis,
+		ioc.InitLogger,
 
 		// DAO 部分
 		dao.NewUserDAO,
+		dao.NewGORMArticleDAO,
 
 		// Cache 部分
-		cache.NewUserCache, cache.NewCodeCache,
+		cache.NewUserCache,
+		cache.NewCodeCache,
 
 		// repository 部分
-		repository.NewUserRepository, repository.NewCodeRepository,
+		repository.NewUserRepository,
+		repository.NewCodeRepository,
+		article.NewArticleRepository,
 
 		// service 部分
-		ioc.InitSmsService, ioc.InitWechatService, service.NewUserService, service.NewSMSCodeService,
+		ioc.InitSmsService,
+		ioc.InitWechatService,
+		service.NewUserService,
+		service.NewSMSCodeService,
+		service.NewArticleService,
 
 		// handler 部分
-		web2.NewUserHandler, web2.NewOAuth2WechatHandler, ioc.NewWechatHandlerConfig, ijwt.NewRedisJWTHandler,
+		web2.NewUserHandler,
+		web2.NewOAuth2WechatHandler,
+		ioc.NewWechatHandlerConfig,
+		ijwt.NewRedisJWTHandler,
+		web2.NewArticleHandler,
 
 		// gin 的中间件
 		ioc.InitMiddlewares,

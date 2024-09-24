@@ -11,11 +11,12 @@ import (
 )
 
 var (
-	ErrUserDuplicate   = errors.New("email or phone conflict")
-	ErrUserNotFound    = gorm.ErrRecordNotFound
-	ErrInvalidData     = gorm.ErrInvalidData
-	ErrRecordNotFound  = gorm.ErrRecordNotFound
-	ErrCodeSendTooMany = errors.New("code send too many")
+	ErrUserDuplicate      = errors.New("email or phone conflict")
+	ErrUserNotFound       = gorm.ErrRecordNotFound
+	ErrInvalidData        = gorm.ErrInvalidData
+	ErrRecordNotFound     = gorm.ErrRecordNotFound
+	ErrCodeSendTooMany    = errors.New("code send too many")
+	ErrUserDuplicateEmail = errors.New("user duplicate email")
 )
 
 type UserDAO interface {

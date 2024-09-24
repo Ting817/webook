@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	ErrUserDuplicate   = dao.ErrUserDuplicate
-	ErrUserNotFound    = dao.ErrUserNotFound
-	ErrInvalidData     = dao.ErrInvalidData
-	ErrRecordNotFound  = dao.ErrRecordNotFound
-	ErrCodeSendTooMany = dao.ErrCodeSendTooMany
+	ErrUserDuplicate      = dao.ErrUserDuplicate
+	ErrUserNotFound       = dao.ErrUserNotFound
+	ErrInvalidData        = dao.ErrInvalidData
+	ErrRecordNotFound     = dao.ErrRecordNotFound
+	ErrCodeSendTooMany    = dao.ErrCodeSendTooMany
+	ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail
 )
 
 type UserRepository interface {
