@@ -18,6 +18,7 @@ var (
 	ErrInvalidData           = repository.ErrInvalidData
 	ErrRecordNotFound        = repository.ErrRecordNotFound
 	ErrCodeSendTooMany       = repository.ErrCodeSendTooMany
+	ErrUserDuplicateEmail    = repository.ErrUserDuplicateEmail
 )
 
 type UserService interface {

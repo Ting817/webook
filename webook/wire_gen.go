@@ -9,10 +9,11 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"webook/internal/repository"
+	"webook/internal/repository/article"
 	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
 	"webook/internal/service"
-	web2 "webook/internal/web"
+	"webook/internal/web"
 	"webook/internal/web/jwt"
 	"webook/ioc"
 )
@@ -34,10 +35,14 @@ func InitWebServer() *gin.Engine {
 	codeCache := cache.NewCodeCache(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
 	codeService := service.NewSMSCodeService(smsService, codeRepository)
-	userHandler := web2.NewUserHandler(userService, codeService, handler)
+	userHandler := web.NewUserHandler(userService, codeService, handler)
 	wechatService := ioc.InitWechatService()
 	wechatHandlerConfig := ioc.NewWechatHandlerConfig()
-	oAuth2WechatHandler := web2.NewOAuth2WechatHandler(wechatService, userService, wechatHandlerConfig, handler)
-	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, wechatHandlerConfig, handler)
+	articleDAO := dao.NewGORMArticleDAO(db)
+	articleRepository := article.NewArticleRepository(articleDAO)
+	articleService := service.NewArticleService(articleRepository)
+	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
 }

@@ -4,6 +4,7 @@ import (
 	"os"
 	"webook/internal/service/oauth2/wechat"
 	"webook/internal/web"
+	"webook/pkg/logger"
 )
 
 func InitWechatService() wechat.Service {
@@ -15,7 +16,8 @@ func InitWechatService() wechat.Service {
 	if !ok {
 		panic("Not found env WECHAT_APP_SECRET")
 	}
-	return wechat.NewService(appId, appKey)
+	var l logger.LoggerV1
+	return wechat.NewService(appId, appKey, l)
 }
 
 func NewWechatHandlerConfig() web.WechatHandlerConfig {
