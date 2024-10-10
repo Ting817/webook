@@ -15,8 +15,7 @@ import (
 func Test_articleService_Publish(t *testing.T) {
 	testCases := []struct {
 		name string
-		mock func(ctrl *gomock.Controller) (article.ArticleAuthorRepository,
-			article.ArticleReaderRepository)
+		mock func(ctrl *gomock.Controller) (article.ArticleAuthorRepository, article.ArticleReaderRepository)
 
 		art domain.Article
 
@@ -25,8 +24,7 @@ func Test_articleService_Publish(t *testing.T) {
 	}{
 		{
 			name: "新建发表成功",
-			mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository,
-				article.ArticleReaderRepository) {
+			mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository, article.ArticleReaderRepository) {
 				author := artrepomocks.NewMockArticleAuthorRepository(ctrl)
 				author.EXPECT().Create(gomock.Any(), domain.Article{
 					Title:   "我的标题",
@@ -54,7 +52,8 @@ func Test_articleService_Publish(t *testing.T) {
 					Id: 123,
 				},
 			},
-			wantId: 1,
+			wantErr: nil,
+			wantId:  1,
 		},
 		{
 			name: "修改并发表成功",
@@ -123,8 +122,7 @@ func Test_articleService_Publish(t *testing.T) {
 		{
 			// 部分失败
 			name: "保存到制作库成功，重试到线上库成功",
-			mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository,
-				article.ArticleReaderRepository) {
+			mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository, article.ArticleReaderRepository) {
 				author := artrepomocks.NewMockArticleAuthorRepository(ctrl)
 				author.EXPECT().Update(gomock.Any(), domain.Article{
 					Id:      2,
@@ -169,8 +167,7 @@ func Test_articleService_Publish(t *testing.T) {
 		{
 			// 部分失败
 			name: "保存到制作库成功，重试全部失败",
-			mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository,
-				article.ArticleReaderRepository) {
+			mock: func(ctrl *gomock.Controller) (article.ArticleAuthorRepository, article.ArticleReaderRepository) {
 				author := artrepomocks.NewMockArticleAuthorRepository(ctrl)
 				author.EXPECT().Update(gomock.Any(), domain.Article{
 					Id:      2,
@@ -210,7 +207,7 @@ func Test_articleService_Publish(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			author, reader := tc.mock(ctrl)
-			svc := NewArticleServiceV1(author, reader, &logger.NopLogger{})
+			svc := NewArticleServiceV1(author, reader, &logger.NoOpLogger{})
 			id, err := svc.PublishV1(context.Background(), tc.art)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantId, id)

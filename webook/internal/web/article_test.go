@@ -91,7 +91,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 				})
 			})
 			// 用不上 codeSvc
-			h := NewArticleHandler(tc.mock(ctrl), &logger.NopLogger{})
+			h := NewArticleHandler(tc.mock(ctrl), &logger.NoOpLogger{})
 			h.RegisterRoutes(server)
 
 			req, err := http.NewRequest(http.MethodPost,

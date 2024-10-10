@@ -23,6 +23,11 @@ type MockArticleService struct {
 	recorder *MockArticleServiceMockRecorder
 }
 
+func (m *MockArticleService) Withdraw(ctx context.Context, uid, id int64) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 // MockArticleServiceMockRecorder is the mock recorder for MockArticleService.
 type MockArticleServiceMockRecorder struct {
 	mock *MockArticleService

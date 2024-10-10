@@ -4,22 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
-	"webook"
+	"webook/internal/integration/startup"
 	"webook/internal/web"
-
-	"github.com/stretchr/testify/assert"
-
-	"webook/ioc"
 )
 
 func TestUserHandler_e2e_SendLoginSMSCode(t *testing.T) {
-	server := main.InitWebServer()
-	c := ioc.NewCfg()
-	rdb := ioc.InitRedis(c)
+	server := startup.InitWebServer()
+	rdb := startup.InitRedis()
 	tests := []struct {
 		name    string
 		before  func(t *testing.T)
@@ -96,7 +92,7 @@ func TestUserHandler_e2e_SendLoginSMSCode(t *testing.T) {
 				val, err := rdb.Set(ctx, "phone_code:login:123456789", "123456", time.Minute*9+time.Second*30).Result()
 				cancel()
 				assert.NoError(t, err)
-				assert.Equal(t, "123456", val)
+				assert.Equal(t, "OK", val)
 			},
 			reqBody: `
 {

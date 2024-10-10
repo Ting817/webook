@@ -65,7 +65,7 @@ func (h *OAuth2WechatHandler) AuthURL(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, Result{
-		Date: url,
+		Data: url,
 	})
 }
 
