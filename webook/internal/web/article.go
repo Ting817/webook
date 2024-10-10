@@ -23,85 +23,90 @@ func NewArticleHandler(svc service.ArticleService, l logger.LoggerV1) *ArticleHa
 	}
 }
 
-func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
+func (a *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
-	// 修改
-	//g.PUT("/")
-	// 新增
-	//g.POST("/")
-	// g.DELETE("/a_id")
-
-	g.POST("/edit", h.Edit)
-	g.POST("/publish", h.Publish)
+	g.POST("/edit", a.Edit)
+	g.POST("/publish", a.Publish)
+	g.POST("/withdraw", a.Withdraw)
 }
 
-func (h *ArticleHandler) Publish(ctx *gin.Context) {
+func (a *ArticleHandler) Edit(c *gin.Context) {
 	var req ArticleReq
-	if err := ctx.Bind(&req); err != nil {
+	if err := c.Bind(&req); err != nil {
 		return
 	}
-	c := ctx.MustGet("claims")
-	claims, ok := c.(*ijwt.UserClaims)
+	claim := c.MustGet("claims")
+	claims, ok := claim.(*ijwt.UserClaims)
 	if !ok {
 		// 你可以考虑监控住这里
 		//ctx.AbortWithStatus(http.StatusUnauthorized)
-		ctx.JSON(http.StatusOK, Result{
+		c.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "系统错误",
 		})
-		h.l.Error("未发现用户的 session 信息")
-		return
-	}
-
-	id, err := h.svc.Publish(ctx, req.toDomain(claims.Uid))
-	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "系统错误",
-		})
-		// 打日志？
-		h.l.Error("发表帖子失败", logger.Error(err))
-		return
-	}
-	ctx.JSON(http.StatusOK, Result{
-		Msg:  "OK",
-		Data: id,
-	})
-}
-
-func (h *ArticleHandler) Edit(ctx *gin.Context) {
-	var req ArticleReq
-	if err := ctx.Bind(&req); err != nil {
-		return
-	}
-	c := ctx.MustGet("claims")
-	claims, ok := c.(*ijwt.UserClaims)
-	if !ok {
-		// 你可以考虑监控住这里
-		//ctx.AbortWithStatus(http.StatusUnauthorized)
-		ctx.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "系统错误",
-		})
-		h.l.Error("未发现用户的 session 信息")
+		a.l.Error("未发现用户的 session 信息")
 		return
 	}
 	// 检测输入，跳过这一步
 	// 调用 svc 的代码
-	id, err := h.svc.Save(ctx, req.toDomain(claims.Uid))
+	id, err := a.svc.Save(c, req.toDomain(claims.Uid))
 	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
+		c.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "系统错误",
 		})
-		// 打日志？
-		h.l.Error("保存帖子失败", logger.Error(err))
+		a.l.Error("保存帖子失败", logger.Error(err))
 		return
 	}
-	ctx.JSON(http.StatusOK, Result{
+	c.JSON(http.StatusOK, Result{
 		Msg:  "OK",
 		Data: id,
 	})
+}
+
+func (a *ArticleHandler) Publish(c *gin.Context) {
+	var req ArticleReq
+	if err := c.Bind(&req); err != nil {
+		return
+	}
+	claim := c.MustGet("claims")
+	claims, ok := claim.(*ijwt.UserClaims)
+	if !ok {
+		// 你可以考虑监控住这里
+		//ctx.AbortWithStatus(http.StatusUnauthorized)
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.l.Error("未发现用户的 session 信息")
+		return
+	}
+
+	id, err := a.svc.Publish(c, req.toDomain(claims.Uid))
+	if err != nil {
+		c.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.l.Error("发表帖子失败", logger.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, Result{
+		Msg:  "OK",
+		Data: id,
+	})
+}
+
+func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
+	var req ArticleReq
+	if err := ctx.Bind(&req); err != nil {
+		a.l.Error("反序列化请求失败", logger.Error(err))
+		return
+	}
+	if err := a.svc.Withdraw(ctx, req.Id); err != nil {
+
+	}
+
 }
 
 type ArticleReq struct {

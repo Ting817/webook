@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 	"webook/internal/domain"
 	"webook/internal/repository/article"
 	"webook/pkg/logger"
@@ -11,91 +10,95 @@ import (
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
+	Withdraw(ctx context.Context, id int64) error
 	PublishV1(ctx context.Context, art domain.Article) (int64, error)
 }
 
 type articleService struct {
-	repo article.ArticleRepository
+	// 1. 在 service 这一层使用两个 repository
+	authorRepo article.ArticleAuthorRepository
+	readerRepo article.ArticleReaderRepository
 
-	// V1
-	author article.ArticleAuthorRepository
-	reader article.ArticleReaderRepository
-	l      logger.LoggerV1
+	// 2. 在 repo 里面处理制作库和线上库
+	// 1 和 2 是互斥的，不会同时存在
+	repo   article.ArticleRepository
+	logger logger.LoggerV1
 }
 
-func (a *articleService) Publish(ctx context.Context, art domain.Article) (int64, error) {
-	// 制作库
-	//id, err := a.repo.Create(ctx, art)
-	//// 线上库呢？
-	//a.repo.SyncToLiveDB(ctx, art)
-	panic("implement me")
+func NewArticleService(repo article.ArticleRepository, l logger.LoggerV1) ArticleService {
+	return &articleService{
+		repo:   repo,
+		logger: l,
+	}
 }
 
-func (a *articleService) PublishV1(ctx context.Context, art domain.Article) (int64, error) {
+func NewArticleServiceV1(authorRepo article.ArticleAuthorRepository, readerRepo article.ArticleReaderRepository, l logger.LoggerV1) ArticleService {
+	return &articleService{
+		authorRepo: authorRepo,
+		readerRepo: readerRepo,
+		logger:     l,
+	}
+}
+
+func (svc *articleService) Withdraw(ctx context.Context, id int64) error {
+	return svc.repo.SyncStatus(ctx, id, domain.ArticleStatusPrivate)
+}
+
+func (svc *articleService) Save(ctx context.Context, art domain.Article) (int64, error) {
+	// 设置为未发表
+	art.Status = domain.ArticleStatusUnpublished
+	if art.Id > 0 {
+		err := svc.update(ctx, art)
+		return art.Id, err
+	}
+	return svc.create(ctx, art)
+}
+
+func (svc *articleService) Publish(ctx context.Context, art domain.Article) (int64, error) {
+	art.Status = domain.ArticleStatusPublished
+	return svc.repo.Sync(ctx, art)
+}
+
+// PublishV1 基于使用两种 repository 的写法
+func (svc *articleService) PublishV1(ctx context.Context, art domain.Article) (int64, error) {
 	var (
 		id  = art.Id
 		err error
 	)
-	if art.Id > 0 {
-		err = a.author.Update(ctx, art)
+	// 这一段逻辑其实就是 Save
+	if art.Id == 0 {
+		id, err = svc.authorRepo.Create(ctx, art)
 	} else {
-		id, err = a.author.Create(ctx, art)
+		err = svc.authorRepo.Update(ctx, art)
 	}
 	if err != nil {
 		return 0, err
 	}
+	// 保持制作库和线上库的 ID 是一样的
 	art.Id = id
 	for i := 0; i < 3; i++ {
-		time.Sleep(time.Second * time.Duration(i))
-		id, err = a.reader.Save(ctx, art)
+		err = svc.readerRepo.Save(ctx, art)
 		if err == nil {
 			break
 		}
-		a.l.Error("部分失败，保存到线上库失败",
-			logger.Int64("art_id", art.Id),
+		svc.logger.Error("部分失败：保存数据到线上库失败",
+			logger.Field{Key: "art_id", Value: id},
 			logger.Error(err))
+		// 在接入了 metrics 或者 tracing 之后，
+		// 这边要进一步记录必要的 DEBUG 信息。
 	}
 	if err != nil {
-		a.l.Error("部分失败，重试彻底失败",
-			logger.Int64("art_id", art.Id),
+		svc.logger.Error("部分失败：保存数据到线上库重试都失败了",
+			logger.Field{Key: "art_id", Value: id},
 			logger.Error(err))
-		// 接入你的告警系统，手工处理一下
-		// 走异步，我直接保存到本地文件
-		// 走 Canal
-		// 打 MQ
+		return 0, err
 	}
-	return id, err
+	return id, nil
 }
 
-func NewArticleService(repo article.ArticleRepository) ArticleService {
-	return &articleService{
-		repo: repo,
-	}
+func (svc *articleService) create(ctx context.Context, art domain.Article) (int64, error) {
+	return svc.repo.Create(ctx, art)
 }
-
-func NewArticleServiceV1(author article.ArticleAuthorRepository,
-	reader article.ArticleReaderRepository, l logger.LoggerV1) ArticleService {
-	return &articleService{
-		author: author,
-		reader: reader,
-		l:      l,
-	}
-}
-
-func (a *articleService) Save(ctx context.Context, art domain.Article) (int64, error) {
-	if art.Id > 0 {
-		err := a.repo.Update(ctx, art)
-		return art.Id, err
-	}
-	return a.repo.Create(ctx, art)
-}
-
-func (a *articleService) update(ctx context.Context, art domain.Article) error {
-	// 只要你不更新 author_id
-	// 但是性能比较差
-	//artInDB := a.repo.FindById(ctx, art.Id)
-	//if art.Author.Id != artInDB.Author.Id {
-	//	return errors.New("更新别人的数据")
-	//}
-	return a.repo.Update(ctx, art)
+func (svc *articleService) update(ctx context.Context, art domain.Article) error {
+	return svc.repo.Update(ctx, art)
 }

@@ -11,7 +11,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"webook/internal/repository/dao"
+	"webook/internal/integration/startup"
+	"webook/internal/repository/dao/article"
 	ijwt "webook/internal/web/jwt"
 )
 
@@ -67,14 +68,14 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 			after: func(t *testing.T) {
 				// 验证数据库
-				var art dao.Article
+				var art article.Article
 				err := s.db.Where("id=?", 1).First(&art).Error
 				assert.NoError(t, err)
 				assert.True(t, art.Ctime > 0)
 				assert.True(t, art.Utime > 0)
 				art.Ctime = 0
 				art.Utime = 0
-				assert.Equal(t, dao.Article{
+				assert.Equal(t, article.Article{
 					Id:       1,
 					Title:    "我的标题",
 					Content:  "我的内容",
@@ -95,7 +96,7 @@ func (s *ArticleTestSuite) TestEdit() {
 			name: "修改已有帖子，并保存",
 			before: func(t *testing.T) {
 				// 提前准备数据
-				err := s.db.Create(dao.Article{
+				err := s.db.Create(article.Article{
 					Id:       2,
 					Title:    "我的标题",
 					Content:  "我的内容",
@@ -109,13 +110,13 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 			after: func(t *testing.T) {
 				// 验证数据库
-				var art dao.Article
+				var art article.Article
 				err := s.db.Where("id=?", 2).First(&art).Error
 				assert.NoError(t, err)
 				// 是为了确保我更新了 Utime
 				assert.True(t, art.Utime > 234)
 				art.Utime = 0
-				assert.Equal(t, dao.Article{
+				assert.Equal(t, article.Article{
 					Id:       2,
 					Title:    "新的标题",
 					Content:  "新的内容",
@@ -138,11 +139,11 @@ func (s *ArticleTestSuite) TestEdit() {
 			name: "修改别人的帖子",
 			before: func(t *testing.T) {
 				// 提前准备数据
-				err := s.db.Create(dao.Article{
+				err := s.db.Create(article.Article{
 					Id:      3,
 					Title:   "我的标题",
 					Content: "我的内容",
-					// 测试模拟的用户 ID 是123，这里是 789
+					// 测试模拟的用户 Uid 是123，这里是 789
 					// 意味着你在修改别人的数据
 					AuthorId: 789,
 					// 跟时间有关的测试，不是逼不得已，不要用 time.Now()
@@ -154,10 +155,10 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 			after: func(t *testing.T) {
 				// 验证数据库
-				var art dao.Article
+				var art article.Article
 				err := s.db.Where("id=?", 3).First(&art).Error
 				assert.NoError(t, err)
-				assert.Equal(t, dao.Article{
+				assert.Equal(t, article.Article{
 					Id:       3,
 					Title:    "我的标题",
 					Content:  "我的内容",

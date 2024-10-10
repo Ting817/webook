@@ -9,6 +9,7 @@ import (
 	"webook/internal/repository/article"
 	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
+	article2 "webook/internal/repository/dao/article"
 	"webook/internal/service"
 	web2 "webook/internal/web"
 	ijwt "webook/internal/web/jwt"
@@ -22,7 +23,7 @@ var userSvcProvider = wire.NewSet(
 	repository.NewUserRepository,
 	service.NewUserService)
 var articleSvcProvider = wire.NewSet(
-	dao.NewGORMArticleDAO,
+	article2.NewGORMArticleDAO,
 	article.NewArticleRepository,
 	service.NewArticleService)
 
@@ -57,7 +58,7 @@ func InitWebServer() *gin.Engine {
 
 func InitArticleHandler() *web2.ArticleHandler {
 	wire.Build(thirdProvider,
-		dao.NewGORMArticleDAO,
+		article2.NewGORMArticleDAO,
 		service.NewArticleService,
 		web2.NewArticleHandler,
 		article.NewArticleRepository,

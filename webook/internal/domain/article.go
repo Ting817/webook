@@ -5,6 +5,7 @@ type Article struct {
 	Title   string
 	Content string
 	Author  Author
+	Status  ArticleStatus
 }
 
 type Author struct {
@@ -12,6 +13,19 @@ type Author struct {
 	Name string
 }
 
-//type AuthorV1 struct {
-//	articles []Article
-//}
+type ArticleStatus uint8
+
+func (s ArticleStatus) ToUint8() uint8 {
+	return uint8(s)
+}
+
+const (
+	// ArticleStatusUnknown 未知状态
+	ArticleStatusUnknown ArticleStatus = iota
+	// ArticleStatusUnpublished 未发表
+	ArticleStatusUnpublished
+	// ArticleStatusPublished 已发表
+	ArticleStatusPublished
+	// ArticleStatusPrivate 仅自己可见
+	ArticleStatusPrivate
+)
