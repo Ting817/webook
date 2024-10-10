@@ -26,12 +26,26 @@ type GORMArticleDAO struct {
 }
 
 func (dao *GORMArticleDAO) SyncStatus(ctx context.Context, id int64, status uint8) error {
-	return dao.db.Transaction(func(tx *gorm.DB) error {
-		err := tx.Model(&Article{}).Where("id=?", id).Update("status", status).Error
-		if err != nil {
-			return err
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).Where("id = ?", id).
+			Updates(map[string]any{
+				"status": status,
+				"utime":  now,
+			})
+		if res.Error != nil {
+			// 数据库有问题
+			return res.Error
 		}
-		return tx.Model(&PublishedArticle{}).Where("id=?", id).Update("status", status).Error
+		if res.RowsAffected != 1 {
+			// 要不 ID 是错的， 要不是创作者不对，特别要注意后者
+			return fmt.Errorf("有人在做破坏，误操作非自己的文章。id: %d", id)
+		}
+		return tx.Model(&PublishedArticle{}).Where("id = ?", id).
+			Updates(map[string]any{
+				"status": status,
+				"utime":  now,
+			}).Error
 	})
 }
 
@@ -102,6 +116,7 @@ func (dao *GORMArticleDAO) SyncClosure(ctx context.Context, art Article) (int64,
 			DoUpdates: clause.Assignments(map[string]interface{}{
 				"title":   art.Title,
 				"content": art.Content,
+				"status":  art.Status,
 				"utime":   now,
 			}),
 		}).Create(&publishArt).Error

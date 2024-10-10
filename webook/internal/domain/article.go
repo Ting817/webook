@@ -19,6 +19,14 @@ func (s ArticleStatus) ToUint8() uint8 {
 	return uint8(s)
 }
 
+func (s ArticleStatus) Valid() bool {
+	return s.ToUint8() > 0
+}
+
+func (s ArticleStatus) NonPublished() bool {
+	return s != ArticleStatusPublished
+}
+
 const (
 	// ArticleStatusUnknown 未知状态
 	ArticleStatusUnknown ArticleStatus = iota
