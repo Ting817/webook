@@ -27,7 +27,7 @@ func (a *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
 	g.POST("/edit", a.Edit)
 	g.POST("/publish", a.Publish)
-	g.POST("/withdraw", a.Withdraw)
+	g.POST("/withdraw", a.Withdraw) // 仅自己可见
 }
 
 func (a *ArticleHandler) Edit(c *gin.Context) {
@@ -103,9 +103,19 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 		a.l.Error("反序列化请求失败", logger.Error(err))
 		return
 	}
-	if err := a.svc.Withdraw(ctx, req.Id); err != nil {
 
+	if err := a.svc.Withdraw(ctx, req.Id); err != nil {
+		a.l.Error("设置为仅自己可见失败", logger.Error(err),
+			logger.Field{Key: "id", Value: req.Id})
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		return
 	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "OK",
+	})
 
 }
 

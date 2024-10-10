@@ -86,9 +86,6 @@ func (c *CachedArticleRepository) toEntity(art domain.Article) dao.Article {
 		Title:    art.Title,
 		Content:  art.Content,
 		AuthorId: art.Author.Id,
-		// 这一步，就是将领域状态转化为存储状态。
-		// 这里我们就是直接转换，
-		// 有些情况下，这里可能是借助一个 map 来转
-		Status: uint8(art.Status),
+		Status:   uint8(art.Status),
 	}
 }
