@@ -22,13 +22,11 @@ func NewArticleAuthorRepository(dao article.ArticleDAO) ArticleAuthorRepository 
 	}
 }
 
-func (repo *CachedArticleAuthorRepository) Create(ctx context.Context,
-	art domain.Article) (int64, error) {
-	return repo.dao.Create(ctx, repo.toEntity(art))
+func (repo *CachedArticleAuthorRepository) Create(ctx context.Context, art domain.Article) (int64, error) {
+	return repo.dao.Insert(ctx, repo.toEntity(art))
 }
 
-func (repo *CachedArticleAuthorRepository) Update(ctx context.Context,
-	art domain.Article) error {
+func (repo *CachedArticleAuthorRepository) Update(ctx context.Context, art domain.Article) error {
 	return repo.dao.UpdateById(ctx, repo.toEntity(art))
 }
 

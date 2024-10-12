@@ -10,10 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"webook/internal/repository"
-	"webook/internal/repository/article"
+	article2 "webook/internal/repository/article"
 	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
-	article2 "webook/internal/repository/dao/article"
+	"webook/internal/repository/dao/article"
 	"webook/internal/service"
 	"webook/internal/web"
 	"webook/internal/web/jwt"
@@ -44,18 +44,16 @@ func InitWebServer() *gin.Engine {
 	wechatService := InitPhantomWechatService(loggerV1)
 	wechatHandlerConfig := ioc.NewWechatHandlerConfig()
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, wechatHandlerConfig, handler)
-	articleDAO := article2.NewGORMArticleDAO(gormDB)
-	articleRepository := article.NewArticleRepository(articleDAO)
+	articleDAO := article.NewGORMArticleDAO(gormDB)
+	articleRepository := article2.NewArticleRepository(articleDAO)
 	articleService := service.NewArticleService(articleRepository, loggerV1)
 	articleHandler := web.NewArticleHandler(articleService, loggerV1)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
 }
 
-func InitArticleHandler() *web.ArticleHandler {
-	gormDB := InitTestDB()
-	articleDAO := article2.NewGORMArticleDAO(gormDB)
-	articleRepository := article.NewArticleRepository(articleDAO)
+func InitArticleHandler(dao2 article.ArticleDAO) *web.ArticleHandler {
+	articleRepository := article2.NewArticleRepository(dao2)
 	loggerV1 := InitLog()
 	articleService := service.NewArticleService(articleRepository, loggerV1)
 	articleHandler := web.NewArticleHandler(articleService, loggerV1)
@@ -85,4 +83,4 @@ var thirdProvider = wire.NewSet(InitRedis, InitTestDB, InitLog)
 
 var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserService)
 
-var articleSvcProvider = wire.NewSet(article2.NewGORMArticleDAO, article.NewArticleRepository, service.NewArticleService)
+var articleSvcProvider = wire.NewSet(article.NewGORMArticleDAO, article2.NewArticleRepository, service.NewArticleService)

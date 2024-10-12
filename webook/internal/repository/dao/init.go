@@ -6,5 +6,5 @@ import (
 )
 
 func InitTable(db *gorm.DB) error {
-	return db.AutoMigrate(&User{}, &article.Article{}, &article.PublishedArticle{}) // 若有其他表，则继续往&User{}后添加
+	return db.AutoMigrate(&User{}, &article.Article{}, &article.PublishedArticle{}, &article.PublishedArticleV1{}) // 若有其他表，则继续往&User{}后添加
 }

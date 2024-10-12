@@ -12,4 +12,5 @@ mock:
 	@mockgen -source=webook/internal/repository/article/article.go -package=artrepomocks -destination=webook/internal/repository/article/mocks/article.mock.go
 	@mockgen -source=webook/internal/repository/article/article_author.go -package=artrepomocks -destination=webook/internal/repository/article/mocks/article_author.mock.go
 	@mockgen -source=webook/internal/repository/article/article_reader.go -package=artrepomocks -destination=webook/internal/repository/article/mocks/article_reader.mock.go
+	@mockgen -source=webook/internal/repository/dao/article/types.go -package=artdaomocks -destination=./webook/internal/repository/dao/article/mocks/article.mock.go
 	@go mod tidy

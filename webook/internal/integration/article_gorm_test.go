@@ -17,14 +17,14 @@ import (
 	ijwt "webook/internal/web/jwt"
 )
 
-// ArticleTestSuite 测试套件
-type ArticleTestSuite struct {
+// ArticleGORMHandlerTestSuite 测试套件
+type ArticleGORMHandlerTestSuite struct {
 	suite.Suite
 	server *gin.Engine
 	db     *gorm.DB
 }
 
-func (s *ArticleTestSuite) SetupSuite() {
+func (s *ArticleGORMHandlerTestSuite) SetupSuite() {
 	// 在所有测试执行之前，初始化一些内容
 	s.server = gin.Default()
 	s.server.Use(func(ctx *gin.Context) {
@@ -33,19 +33,19 @@ func (s *ArticleTestSuite) SetupSuite() {
 		})
 	})
 	s.db = startup.InitTestDB()
-	artHdl := startup.InitArticleHandler()
+	artHdl := startup.InitArticleHandler(article.NewGORMArticleDAO(s.db))
 	// 注册好了路由
 	artHdl.RegisterRoutes(s.server)
 }
 
 // TearDownTest 每一个都会执行
-func (s *ArticleTestSuite) TearDownTest() {
+func (s *ArticleGORMHandlerTestSuite) TearDownTest() {
 	// 清空所有数据，并且自增主键恢复到 1
 	s.db.Exec("TRUNCATE TABLE articles")
 	s.db.Exec("TRUNCATE TABLE published_articles")
 }
 
-func (s *ArticleTestSuite) TestEdit() {
+func (s *ArticleGORMHandlerTestSuite) TestEdit() {
 	t := s.T()
 	testCases := []struct {
 		name string
@@ -219,7 +219,7 @@ func (s *ArticleTestSuite) TestEdit() {
 	}
 }
 
-func (s *ArticleTestSuite) TestPublish() {
+func (s *ArticleGORMHandlerTestSuite) TestPublish() {
 	t := s.T()
 
 	testCases := []struct {
@@ -264,13 +264,11 @@ func (s *ArticleTestSuite) TestPublish() {
 				publishedArt.Ctime = 0
 				publishedArt.Utime = 0
 				assert.Equal(t, article.PublishedArticle{
-					Article: article.Article{
-						Id:       1,
-						Title:    "hello，你好",
-						Content:  "随便试试",
-						AuthorId: 123,
-						Status:   uint8(domain.ArticleStatusPublished),
-					},
+					Id:       1,
+					Title:    "hello，你好",
+					Content:  "随便试试",
+					AuthorId: 123,
+					Status:   uint8(domain.ArticleStatusPublished),
 				}, publishedArt)
 			},
 			req: Article{
@@ -319,13 +317,11 @@ func (s *ArticleTestSuite) TestPublish() {
 				publishedArt.Ctime = 0
 				publishedArt.Utime = 0
 				assert.Equal(t, article.PublishedArticle{
-					Article: article.Article{
-						Id:       2,
-						Status:   uint8(domain.ArticleStatusPublished),
-						Content:  "新的内容",
-						Title:    "新的标题",
-						AuthorId: 123,
-					},
+					Id:       2,
+					Status:   uint8(domain.ArticleStatusPublished),
+					Content:  "新的内容",
+					Title:    "新的标题",
+					AuthorId: 123,
 				}, publishedArt)
 			},
 			req: Article{
@@ -351,7 +347,8 @@ func (s *ArticleTestSuite) TestPublish() {
 					AuthorId: 123,
 				}
 				s.db.Create(&art)
-				s.db.Create(&article.PublishedArticle{Article: art})
+				part := article.PublishedArticle(art)
+				s.db.Create(&part)
 			},
 			after: func(t *testing.T) {
 				var art article.Article
@@ -380,14 +377,12 @@ func (s *ArticleTestSuite) TestPublish() {
 				assert.True(t, publishedArt.Utime > 234)
 				publishedArt.Utime = 0
 				assert.Equal(t, article.PublishedArticle{
-					Article: article.Article{
-						Id:       3,
-						Ctime:    456,
-						Status:   uint8(domain.ArticleStatusUnknown),
-						Content:  "新的内容",
-						Title:    "新的标题",
-						AuthorId: 123,
-					},
+					Id:       3,
+					Ctime:    456,
+					Status:   uint8(domain.ArticleStatusPublished),
+					Content:  "新的内容",
+					Title:    "新的标题",
+					AuthorId: 123,
 				}, publishedArt)
 			},
 			req: Article{
@@ -414,14 +409,14 @@ func (s *ArticleTestSuite) TestPublish() {
 					AuthorId: 789,
 				}
 				s.db.Create(&art)
-				s.db.Create(&article.PublishedArticle{Article: article.Article{
+				s.db.Create(&article.PublishedArticle{
 					Id:       4,
 					Title:    "我的标题",
 					Content:  "我的内容",
 					Ctime:    456,
 					Utime:    234,
 					AuthorId: 789,
-				}})
+				})
 			},
 			after: func(t *testing.T) {
 				// 更新应该是失败了，数据没有发生变化
@@ -442,14 +437,12 @@ func (s *ArticleTestSuite) TestPublish() {
 				err = s.db.Where("id = ?", 4).First(&part).Error
 				assert.NoError(t, err)
 				assert.Equal(t, article.PublishedArticle{
-					Article: article.Article{
-						Id:       4,
-						Title:    "我的标题",
-						Content:  "我的内容",
-						AuthorId: 789,
-						Ctime:    456,
-						Utime:    234,
-					},
+					Id:       4,
+					Title:    "我的标题",
+					Content:  "我的内容",
+					AuthorId: 789,
+					Ctime:    456,
+					Utime:    234,
 				}, part)
 			},
 			req: Article{
@@ -495,12 +488,12 @@ func (s *ArticleTestSuite) TestPublish() {
 	}
 }
 
-func (s *ArticleTestSuite) TestABC() {
+func (s *ArticleGORMHandlerTestSuite) TestABC() {
 	s.T().Log("hello，这是测试套件")
 }
 
 func TestArticle(t *testing.T) {
-	suite.Run(t, &ArticleTestSuite{})
+	suite.Run(t, &ArticleGORMHandlerTestSuite{})
 }
 
 type Article struct {

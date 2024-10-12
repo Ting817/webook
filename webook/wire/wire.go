@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"webook/internal/repository"
-	"webook/internal/repository/article"
+	article2 "webook/internal/repository/article"
 	"webook/internal/repository/cache"
 	"webook/internal/repository/dao"
-	article2 "webook/internal/repository/dao/article"
+	"webook/internal/repository/dao/article"
 	"webook/internal/service"
-	web2 "webook/internal/web"
+	"webook/internal/web"
 	ijwt "webook/internal/web/jwt"
 	"webook/ioc"
 )
@@ -26,7 +26,7 @@ func InitWebServer() *gin.Engine {
 
 		// DAO 部分
 		dao.NewUserDAO,
-		article2.NewGORMArticleDAO,
+		article.NewGORMArticleDAO,
 
 		// Cache 部分
 		cache.NewUserCache,
@@ -35,7 +35,7 @@ func InitWebServer() *gin.Engine {
 		// repository 部分
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
-		article.NewArticleRepository,
+		article2.NewArticleRepository,
 
 		// service 部分
 		ioc.InitSmsService,
@@ -45,11 +45,11 @@ func InitWebServer() *gin.Engine {
 		service.NewArticleService,
 
 		// handler 部分
-		web2.NewUserHandler,
-		web2.NewOAuth2WechatHandler,
+		web.NewUserHandler,
+		web.NewOAuth2WechatHandler,
 		ioc.NewWechatHandlerConfig,
 		ijwt.NewRedisJWTHandler,
-		web2.NewArticleHandler,
+		web.NewArticleHandler,
 
 		// gin 的中间件
 		ioc.InitMiddlewares,

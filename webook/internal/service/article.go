@@ -10,7 +10,7 @@ import (
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
-	Withdraw(ctx context.Context, id int64) error
+	Withdraw(ctx context.Context, uid, id int64) error
 	PublishV1(ctx context.Context, art domain.Article) (int64, error)
 }
 
@@ -40,8 +40,8 @@ func NewArticleServiceV1(authorRepo article.ArticleAuthorRepository, readerRepo 
 	}
 }
 
-func (svc *articleService) Withdraw(ctx context.Context, id int64) error {
-	return svc.repo.SyncStatus(ctx, id, domain.ArticleStatusPrivate)
+func (svc *articleService) Withdraw(ctx context.Context, uid, id int64) error {
+	return svc.repo.SyncStatus(ctx, uid, id, domain.ArticleStatusPrivate)
 }
 
 func (svc *articleService) Save(ctx context.Context, art domain.Article) (int64, error) {
