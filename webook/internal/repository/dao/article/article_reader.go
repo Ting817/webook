@@ -53,7 +53,3 @@ func (dao *GORMArticleReaderDAO) UpsertV2(ctx context.Context, art PublishedArti
 		}),
 	}).Create(&art).Error
 }
-
-type PublishedArticle struct {
-	Article
-}

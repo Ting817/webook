@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"webook/internal/domain"
 	"webook/internal/service"
-	ijwt "webook/internal/web/jwt"
+	"webook/internal/web/jwt"
 	"webook/pkg/logger"
 )
 
@@ -36,7 +36,7 @@ func (a *ArticleHandler) Edit(c *gin.Context) {
 		return
 	}
 	claim := c.MustGet("claims")
-	claims, ok := claim.(*ijwt.UserClaims)
+	claims, ok := claim.(*jwt.UserClaims)
 	if !ok {
 		// 你可以考虑监控住这里
 		//ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -70,7 +70,7 @@ func (a *ArticleHandler) Publish(c *gin.Context) {
 		return
 	}
 	claim := c.MustGet("claims")
-	claims, ok := claim.(*ijwt.UserClaims)
+	claims, ok := claim.(*jwt.UserClaims)
 	if !ok {
 		// 你可以考虑监控住这里
 		//ctx.AbortWithStatus(http.StatusUnauthorized)
@@ -104,7 +104,17 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 		return
 	}
 
-	if err := a.svc.Withdraw(ctx, req.Id); err != nil {
+	usr, ok := ctx.MustGet("user").(jwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.l.Error("获得用户会话信息失败")
+		return
+	}
+
+	if err := a.svc.Withdraw(ctx, usr.Uid, req.Id); err != nil {
 		a.l.Error("设置为仅自己可见失败", logger.Error(err),
 			logger.Field{Key: "id", Value: req.Id})
 		ctx.JSON(http.StatusOK, Result{

@@ -11,7 +11,7 @@ import (
 	"webook/internal/repository/dao"
 	article2 "webook/internal/repository/dao/article"
 	"webook/internal/service"
-	web2 "webook/internal/web"
+	"webook/internal/web"
 	ijwt "webook/internal/web/jwt"
 	"webook/ioc"
 )
@@ -45,7 +45,7 @@ func InitWebServer() *gin.Engine {
 		InitPhantomWechatService,
 
 		// handler 部分
-		web2.NewUserHandler, web2.NewArticleHandler, web2.NewOAuth2WechatHandler, ioc.NewWechatHandlerConfig, ijwt.NewRedisJWTHandler,
+		web.NewUserHandler, web.NewArticleHandler, web.NewOAuth2WechatHandler, ioc.NewWechatHandlerConfig, ijwt.NewRedisJWTHandler,
 
 		// gin 的中间件
 		ioc.InitMiddlewares,
@@ -56,14 +56,14 @@ func InitWebServer() *gin.Engine {
 	return gin.Default()
 }
 
-func InitArticleHandler() *web2.ArticleHandler {
+func InitArticleHandler(dao article2.ArticleDAO) *web.ArticleHandler {
 	wire.Build(thirdProvider,
-		article2.NewGORMArticleDAO,
+		//article2.NewGORMArticleDAO,
 		service.NewArticleService,
-		web2.NewArticleHandler,
+		web.NewArticleHandler,
 		article.NewArticleRepository,
 	)
-	return &web2.ArticleHandler{}
+	return new(web.ArticleHandler)
 }
 
 func InitUserSvc() service.UserService {
