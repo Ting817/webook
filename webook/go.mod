@@ -6,6 +6,7 @@ toolchain go1.23.0
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/ecodeclub/ekit v0.0.9
@@ -53,6 +54,7 @@ require (
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
