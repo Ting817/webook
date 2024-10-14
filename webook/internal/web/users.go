@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 	jwt2 "webook/internal/web/jwt"
+	"webook/pkg/ginx"
+	"webook/pkg/logger"
 
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
@@ -32,9 +34,10 @@ type UserHandler struct {
 	passwordExp  *regexp.Regexp
 	jwt2.Handler // 组合法
 	cmd          redis.Cmdable
+	l            logger.LoggerV1
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl jwt2.Handler) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl jwt2.Handler, l logger.LoggerV1) *UserHandler {
 	// 信息校验：正则表达式
 	const (
 		emailRegexPattern    = `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`
@@ -61,7 +64,7 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	// s.GET("/profile", u.Profile)
 	s.GET("/profile", u.ProfileJWT)
 	s.POST("/login_sms/code/send", u.SendLoginSMSCode)
-	s.POST("/login_sms", u.LoginSMS)
+	s.POST("/login_sms", ginx.WrapReq[LoginSMSReq](u.l.With(logger.String("method", "login_sms")), u.LoginSMS))
 	s.POST("/refresh_token", u.RefreshToken)
 }
 
@@ -386,52 +389,30 @@ func (u *UserHandler) RefreshToken(c *gin.Context) {
 	})
 }
 
-func (u *UserHandler) LoginSMS(c *gin.Context) {
-	type Req struct {
-		Phone string `json:"phone"`
-		Code  string `json:"code"`
-	}
-	var req Req
-	if err := c.Bind(&req); err != nil {
-		return
-	}
+type LoginSMSReq struct {
+	Phone string `json:"phone"`
+	Code  string `json:"code"`
+}
+
+func (u *UserHandler) LoginSMS(c *gin.Context, req LoginSMSReq) (ginx.Result, error) {
 	ok, err := u.codeSvc.Verify(c, biz, req.Phone, req.Code)
 	if err != nil {
-		c.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "system error!",
-		})
-		zap.L().Error("varify code error", zap.Error(err))
 		// 手机号码为敏感信息，不可以在日志中打印出来，但可以在 Debug 中打出来，线上不会打 Debug 级别。但理论上也别打出来
 		//zap.L().Debug("", zap.String("phone", req.Phone))
-		return
+		return Result(Result{Code: 5, Msg: "system error!"}), fmt.Errorf("varify code error %w", err)
 	}
 	if !ok {
-		c.JSON(http.StatusOK, Result{
-			Code: 4,
-			Msg:  "code error!",
-		})
-		return
+		return Result{Code: 4, Msg: "code error!"}, nil
 	}
 
 	user, err := u.svc.FindOrCreate(c, req.Phone)
 	if err != nil {
-		c.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "system error!" + err.Error(),
-		})
-		return
+		return Result{Code: 5, Msg: "system error."}, fmt.Errorf("login or signup failed %w", err)
 	}
 
 	if err = u.SetLoginToken(c, user.Id); err != nil {
-		c.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "set login token error!" + err.Error(),
-		})
-		return
+		return Result{Code: 5, Msg: "set login token error!"}, fmt.Errorf("set login token error %w", err)
 	}
 
-	c.JSON(http.StatusOK, Result{
-		Msg: "code verify success!",
-	})
+	return Result{Msg: "code verify success!"}, nil
 }

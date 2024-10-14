@@ -35,3 +35,9 @@ func (z *ZapLogger) toArgs(args []Field) []zap.Field {
 	}
 	return res
 }
+
+func (z *ZapLogger) With(args ...Field) LoggerV1 {
+	return &ZapLogger{
+		logger: z.logger.With(z.toArgs(args)...),
+	}
+}
