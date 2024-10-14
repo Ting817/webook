@@ -2,6 +2,7 @@ package article
 
 import (
 	"context"
+	"github.com/ecodeclub/ekit/slice"
 	"gorm.io/gorm"
 	"webook/internal/domain"
 	"webook/internal/repository/dao/article"
@@ -10,11 +11,12 @@ import (
 type ArticleRepository interface {
 	Create(ctx context.Context, art domain.Article) (int64, error)
 	Update(ctx context.Context, art domain.Article) error
-
 	// Sync 本身要求先保存到制作库，再同步到线上库
 	Sync(ctx context.Context, art domain.Article) (int64, error)
 	// SyncStatus 仅仅同步状态
 	SyncStatus(ctx context.Context, uid, id int64, status domain.ArticleStatus) error
+	List(ctx context.Context, author int64, offset int, limit int) ([]domain.Article, error)
+	GetById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -123,6 +125,37 @@ func (repo *CachedArticleRepository) Create(ctx context.Context,
 func (repo *CachedArticleRepository) Update(ctx context.Context,
 	art domain.Article) error {
 	return repo.dao.UpdateById(ctx, repo.toEntity(art))
+}
+
+func (repo *CachedArticleRepository) GetById(ctx context.Context, id int64) (domain.Article, error) {
+	art, err := repo.dao.GetById(ctx, id)
+	if err != nil {
+		return domain.Article{}, err
+	}
+	return repo.toDomain(art), nil
+}
+
+func (repo *CachedArticleRepository) List(ctx context.Context, author int64, offset int, limit int) ([]domain.Article, error) {
+	arts, err := repo.dao.GetByAuthor(ctx, author, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map[article.Article, domain.Article](arts,
+		func(idx int, src article.Article) domain.Article {
+			return repo.toDomain(src)
+		}), nil
+}
+
+func (repo *CachedArticleRepository) toDomain(art article.Article) domain.Article {
+	return domain.Article{
+		Id:      art.Id,
+		Title:   art.Title,
+		Status:  domain.ArticleStatus(art.Status),
+		Content: art.Content,
+		Author: domain.Author{
+			Id: art.AuthorId,
+		},
+	}
 }
 
 func (repo *CachedArticleRepository) toEntity(art domain.Article) article.Article {

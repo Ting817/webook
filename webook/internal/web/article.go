@@ -1,11 +1,14 @@
 package web
 
 import (
+	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 	"webook/internal/domain"
 	"webook/internal/service"
 	"webook/internal/web/jwt"
+	"webook/pkg/ginx"
 	"webook/pkg/logger"
 )
 
@@ -28,6 +31,7 @@ func (a *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g.POST("/edit", a.Edit)
 	g.POST("/publish", a.Publish)
 	g.POST("/withdraw", a.Withdraw) // 仅自己可见
+	g.POST("/list", ginx.WrapReqAndToken[Page, jwt.UserClaims](a.List))
 }
 
 func (a *ArticleHandler) Edit(c *gin.Context) {
@@ -129,19 +133,25 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 
 }
 
-type ArticleReq struct {
-	Id      int64  `json:"id"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
-}
-
-func (req ArticleReq) toDomain(uid int64) domain.Article {
-	return domain.Article{
-		Id:      req.Id,
-		Title:   req.Title,
-		Content: req.Content,
-		Author: domain.Author{
-			Id: uid,
-		},
+func (h *ArticleHandler) List(ctx *gin.Context, req Page, uc jwt.UserClaims) (ginx.Result, error) {
+	res, err := h.svc.List(ctx, uc.Uid, req.Offset, req.Limit)
+	if err != nil {
+		return ginx.Result{Code: 5, Msg: "system error"}, err
 	}
+	return ginx.Result{
+		Data: slice.Map[domain.Article, ArticleVO](res, func(idx int, src domain.Article) ArticleVO {
+			return ArticleVO{
+				Id:       src.Id,
+				Title:    src.Title,
+				Abstract: src.Abstract(),
+				Status:   src.Status.ToUint8(),
+				// 这个列表请求，不需要返回内容
+				//Content: src.Content,
+				// 这个是创作者看自己的文章列表，也不需要这个字段
+				//Author: src.Author
+				Ctime: src.Ctime.Format(time.DateTime),
+				Utime: src.Utime.Format(time.DateTime),
+			}
+		}),
+	}, nil
 }
