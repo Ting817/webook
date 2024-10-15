@@ -179,6 +179,10 @@ func (repo *CachedArticleRepository) Update(ctx context.Context, art domain.Arti
 }
 
 func (repo *CachedArticleRepository) GetById(ctx context.Context, id int64) (domain.Article, error) {
+	cachedArt, err := repo.cache.Get(ctx, id)
+	if err == nil {
+		return cachedArt, nil
+	}
 	art, err := repo.dao.GetById(ctx, id)
 	if err != nil {
 		return domain.Article{}, err
@@ -211,6 +215,10 @@ func (repo *CachedArticleRepository) List(ctx context.Context, uid int64, offset
 		func(idx int, src dao.Article) domain.Article {
 			return repo.toDomain(src)
 		})
+	// 一般都是让调用者来控制是否异步。
+	go func() {
+		repo.preCache(ctx, res)
+	}()
 	// 这里可做成异步
 	err = repo.cache.SetFirstPage(ctx, uid, res)
 	if err != nil {

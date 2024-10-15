@@ -26,17 +26,20 @@ func InitWebServer() *gin.Engine {
 
 		// DAO 部分
 		dao.NewUserDAO,
+		dao.NewGORMInteractiveDAO,
 		article.NewGORMArticleDAO,
 
 		// Cache 部分
 		cache.NewRedisUserCache,
 		cache.NewRedisCodeCache,
 		cache.NewRedisArticleCache,
+		cache.NewRedisInteractiveCache,
 
 		// repository 部分
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
 		article2.NewArticleRepository,
+		repository.NewCachedInteractiveRepository,
 
 		// service 部分
 		ioc.InitSmsService,
@@ -44,6 +47,7 @@ func InitWebServer() *gin.Engine {
 		service.NewUserService,
 		service.NewSMSCodeService,
 		service.NewArticleService,
+		service.NewInteractiveService,
 
 		// handler 部分
 		web.NewUserHandler,

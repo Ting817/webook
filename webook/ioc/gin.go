@@ -12,11 +12,13 @@ import (
 	web2 "webook/internal/web"
 	ijwt "webook/internal/web/jwt"
 	"webook/internal/web/middleware"
+	"webook/pkg/ginx"
 	"webook/pkg/logger"
 	"webook/pkg/middlewares/accesslog"
 )
 
-func InitWebServer(mdls []gin.HandlerFunc, hdl *web2.UserHandler, oauth2WechatHdl *web2.OAuth2WechatHandler, articleHdl *web2.ArticleHandler) *gin.Engine {
+func InitWebServer(mdls []gin.HandlerFunc, hdl *web2.UserHandler, oauth2WechatHdl *web2.OAuth2WechatHandler, articleHdl *web2.ArticleHandler, l logger.LoggerV1) *gin.Engine {
+	ginx.SetLogger(l)
 	server := gin.Default()
 	server.Use(mdls...)
 	hdl.RegisterRoutes(server)
