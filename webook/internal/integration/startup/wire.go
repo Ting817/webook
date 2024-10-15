@@ -19,11 +19,12 @@ import (
 var thirdProvider = wire.NewSet(InitRedis, InitTestDB, InitLog)
 var userSvcProvider = wire.NewSet(
 	dao.NewUserDAO,
-	cache.NewUserCache,
+	cache.NewRedisUserCache,
 	repository.NewUserRepository,
 	service.NewUserService)
 var articleSvcProvider = wire.NewSet(
 	article2.NewGORMArticleDAO,
+	cache.NewRedisArticleCache,
 	article.NewArticleRepository,
 	service.NewArticleService)
 
@@ -35,7 +36,7 @@ func InitWebServer() *gin.Engine {
 		articleSvcProvider,
 
 		// 验证码缓存在redis中
-		cache.NewCodeCache,
+		cache.NewRedisCodeCache,
 		repository.NewCodeRepository,
 
 		// service 部分
