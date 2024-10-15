@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"webook/internal/domain"
 	"webook/internal/repository/article"
 	"webook/pkg/logger"
@@ -14,6 +15,7 @@ type ArticleService interface {
 	PublishV1(ctx context.Context, art domain.Article) (int64, error)
 	List(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
+	GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error)
 }
 
 type articleService struct {
@@ -103,4 +105,16 @@ func (svc *articleService) create(ctx context.Context, art domain.Article) (int6
 }
 func (svc *articleService) update(ctx context.Context, art domain.Article) error {
 	return svc.repo.Update(ctx, art)
+}
+
+func (svc *articleService) GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error) {
+	return svc.repo.GetPublishedById(ctx, id)
+}
+
+func (svc *articleService) List(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error) {
+	return svc.repo.List(ctx, uid, offset, limit)
+}
+
+func (svc *articleService) GetById(ctx context.Context, id int64) (domain.Article, error) {
+	return svc.repo.GetById(ctx, id)
 }

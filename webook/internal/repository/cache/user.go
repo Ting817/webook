@@ -23,10 +23,10 @@ type RedisUserCache struct {
 	expiration time.Duration
 }
 
-// NewUserCache A 用到了 B, B 一定是接口 => 保证面向接口
+// NewRedisUserCache NewUserCache A 用到了 B, B 一定是接口 => 保证面向接口
 // A 用到了 B, B 一定是 A 的字段 => 规避宝变量、包方法，都非常缺乏扩展性
 // A 用到了 B, A 绝对不初始化 B, 而是外部注入 => 保持依赖注入(DI, Dependency Injection)
-func NewUserCache(cmd redis.Cmdable) UserCache {
+func NewRedisUserCache(cmd redis.Cmdable) UserCache {
 	return &RedisUserCache{
 		cmd:        cmd,
 		expiration: time.Minute * 15,

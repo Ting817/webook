@@ -76,3 +76,27 @@ func WrapReqAndToken[T any, C jwt.Claims](fn func(ctx *gin.Context, req T, uc C)
 		ctx.JSON(http.StatusOK, res)
 	}
 }
+
+func WrapToken[C jwt.Claims](fn func(ctx *gin.Context, uc C) (Result, error)) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		val, ok := ctx.Get("claims")
+		if !ok {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		c, ok := val.(C)
+		if !ok {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		res, err := fn(ctx, c)
+		if err != nil {
+			L.Error("处理业务逻辑出错", logger.String("path", ctx.Request.URL.Path),
+				logger.String("route", ctx.FullPath()),
+				logger.Error(err))
+		}
+		ctx.JSON(http.StatusOK, res)
+	}
+}

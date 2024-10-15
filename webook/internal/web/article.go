@@ -1,9 +1,11 @@
 package web
 
 import (
+	"fmt"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"time"
 	"webook/internal/domain"
 	"webook/internal/service"
@@ -32,6 +34,11 @@ func (a *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g.POST("/publish", a.Publish)
 	g.POST("/withdraw", a.Withdraw) // 仅自己可见
 	g.POST("/list", ginx.WrapReqAndToken[Page, jwt.UserClaims](a.List))
+	g.GET("/detail/:id", ginx.WrapToken[jwt.UserClaims](a.Detail))
+
+	pub := g.Group("/pub")
+	//pub.GET("/pub", a.PubList)
+	pub.GET("/:id", a.PubDetail)
 }
 
 func (a *ArticleHandler) Edit(c *gin.Context) {
@@ -154,4 +161,66 @@ func (h *ArticleHandler) List(ctx *gin.Context, req Page, uc jwt.UserClaims) (gi
 			}
 		}),
 	}, nil
+}
+
+func (a *ArticleHandler) Detail(ctx *gin.Context, usr jwt.UserClaims) (ginx.Result, error) {
+	idstr := ctx.Param("id")
+	id, err := strconv.ParseInt(idstr, 10, 64)
+	if err != nil {
+		return Result{Code: 4, Msg: "参数错误"}, err
+	}
+
+	art, err := a.svc.GetById(ctx, id)
+	if err != nil {
+		return Result{Code: 5, Msg: "system error"}, err
+	}
+
+	if art.Author.Id != usr.Uid {
+		return Result{Code: 4, Msg: "输入有误"}, fmt.Errorf("非法访问文章， 创作者 ID 不匹配 %w", err)
+	}
+
+	return Result{
+		Data: ArticleVO{
+			Id:       art.Id,
+			Title:    art.Title,
+			Abstract: art.Abstract(),
+			Status:   art.Status.ToUint8(),
+			Ctime:    art.Ctime.Format(time.DateTime),
+			Utime:    art.Utime.Format(time.DateTime),
+		},
+	}, nil
+}
+
+func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
+	idstr := ctx.Param("id")
+	id, err := strconv.ParseInt(idstr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 4,
+			Msg:  "参数错误",
+		})
+		a.l.Error("前端输入的 ID 不对", logger.Error(err))
+		return
+	}
+	art, err := a.svc.GetPublishedById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		a.l.Error("获得文章信息失败", logger.Error(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: ArticleVO{
+			Id:      art.Id,
+			Title:   art.Title,
+			Status:  art.Status.ToUint8(),
+			Content: art.Content,
+			// 要把作者信息带出去
+			Author: art.Author.Name,
+			Ctime:  art.Ctime.Format(time.DateTime),
+			Utime:  art.Utime.Format(time.DateTime),
+		},
+	})
 }

@@ -40,6 +40,10 @@ func (s ArticleStatus) NonPublished() bool {
 	return s != ArticleStatusPublished
 }
 
+func (a Article) Published() bool {
+	return a.Status == ArticleStatusPublished
+}
+
 const (
 	// ArticleStatusUnknown 未知状态
 	ArticleStatusUnknown ArticleStatus = iota

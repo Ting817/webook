@@ -24,7 +24,7 @@ type RedisCodeCache struct {
 
 // 其实Go的最佳实践是返回具体类型，而不是返回接口。此处用了wire，所以用接口
 
-func NewCodeCache(client redis.Cmdable) CodeCache {
+func NewRedisCodeCache(client redis.Cmdable) CodeCache {
 	return &RedisCodeCache{
 		client: client,
 	}
