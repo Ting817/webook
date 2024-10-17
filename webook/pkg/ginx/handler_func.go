@@ -7,6 +7,13 @@ import (
 	"webook/pkg/logger"
 )
 
+// L 受制于泛型，这里只能使用包变量
+var L logger.LoggerV1 = logger.NewNoOpLogger()
+
+func SetLogger(l logger.LoggerV1) {
+	L = l
+}
+
 func WrapReq[T any](l logger.LoggerV1, fn func(ctx *gin.Context, req T) (Result, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req T
@@ -22,15 +29,6 @@ func WrapReq[T any](l logger.LoggerV1, fn func(ctx *gin.Context, req T) (Result,
 		ctx.JSON(http.StatusOK, res)
 	}
 }
-
-type Result struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data any    `json:"data"`
-}
-
-// L 使用包变量
-var L logger.LoggerV1
 
 func WrapReqV1[T any](fn func(ctx *gin.Context, req T) (Result, error)) gin.HandlerFunc {
 	return func(ctx *gin.Context) {

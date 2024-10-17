@@ -11,3 +11,8 @@ type handler interface {
 
 // Result 重构的小技巧
 type Result = ginx.Result
+
+type Page struct {
+	Offset int `json:"offset"`
+	Limit  int `json:"limit"`
+}

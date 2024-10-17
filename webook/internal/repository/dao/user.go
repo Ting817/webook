@@ -17,6 +17,7 @@ var (
 	ErrRecordNotFound     = gorm.ErrRecordNotFound
 	ErrCodeSendTooMany    = errors.New("code send too many")
 	ErrUserDuplicateEmail = errors.New("user duplicate email")
+	ErrDataNotFound       = errors.New("data not found")
 )
 
 type UserDAO interface {

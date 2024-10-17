@@ -3,6 +3,7 @@ package jwt
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"webook/pkg/ginx"
 )
 
 type Handler interface {
@@ -19,9 +20,4 @@ type RefreshClaims struct {
 	jwt.RegisteredClaims
 }
 
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64 // Uid: 额外加自己的数据在token里
-	UserAgent string
-	Ssid      string
-}
+type UserClaims = ginx.UserClaims
