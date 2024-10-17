@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 	domain "webook/internal/domain"
 
+	gin "github.com/gin-gonic/gin"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -70,19 +71,34 @@ func (mr *MockArticleRepositoryMockRecorder) GetById(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetById", reflect.TypeOf((*MockArticleRepository)(nil).GetById), ctx, id)
 }
 
-// List mocks base method.
-func (m *MockArticleRepository) List(ctx context.Context, author int64, offset, limit int) ([]domain.Article, error) {
+// GetPublishedById mocks base method.
+func (m *MockArticleRepository) GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", ctx, author, offset, limit)
+	ret := m.ctrl.Call(m, "GetPublishedById", ctx, id)
+	ret0, _ := ret[0].(domain.Article)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPublishedById indicates an expected call of GetPublishedById.
+func (mr *MockArticleRepositoryMockRecorder) GetPublishedById(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPublishedById", reflect.TypeOf((*MockArticleRepository)(nil).GetPublishedById), ctx, id)
+}
+
+// List mocks base method.
+func (m *MockArticleRepository) List(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, uid, offset, limit)
 	ret0, _ := ret[0].([]domain.Article)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockArticleRepositoryMockRecorder) List(ctx, author, offset, limit any) *gomock.Call {
+func (mr *MockArticleRepositoryMockRecorder) List(ctx, uid, offset, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockArticleRepository)(nil).List), ctx, author, offset, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockArticleRepository)(nil).List), ctx, uid, offset, limit)
 }
 
 // Sync mocks base method.
