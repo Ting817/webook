@@ -41,6 +41,7 @@ func InitWebServer() *gin.Engine {
 		thirdProvider,
 		userSvcProvider,
 		articleSvcProvider,
+		interactiveSvcProvider,
 
 		// 验证码缓存在redis中
 		cache.NewRedisCodeCache,
@@ -67,6 +68,9 @@ func InitWebServer() *gin.Engine {
 func InitArticleHandler(dao article2.ArticleDAO) *web.ArticleHandler {
 	wire.Build(thirdProvider,
 		//article2.NewGORMArticleDAO,
+		userSvcProvider,
+		interactiveSvcProvider,
+		cache.NewRedisArticleCache,
 		service.NewArticleService,
 		web.NewArticleHandler,
 		article.NewArticleRepository,
@@ -86,5 +90,5 @@ func InitJwtHdl() ijwt.Handler {
 
 func InitInteractiveService() service.InteractiveService {
 	wire.Build(thirdProvider, interactiveSvcProvider)
-	return service.NewInteractiveService(nil)
+	return service.NewInteractiveService(nil, nil)
 }

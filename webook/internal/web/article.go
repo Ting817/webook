@@ -216,7 +216,7 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context, uc ginx.UserClaims) (Result
 	)
 	eg.Go(func() error {
 		var er error
-		art, er = a.svc.GetPublishedById(ctx, id)
+		art, er = a.svc.GetPublishedById(ctx, id, uc.Uid)
 		return er
 	})
 

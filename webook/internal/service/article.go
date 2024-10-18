@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
 	"webook/internal/domain"
+	events "webook/internal/events/article"
 	"webook/internal/repository/article"
 	"webook/pkg/logger"
 )
@@ -15,7 +15,7 @@ type ArticleService interface {
 	PublishV1(ctx context.Context, art domain.Article) (int64, error)
 	List(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
-	GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error)
+	GetPublishedById(ctx context.Context, id, uid int64) (domain.Article, error)
 }
 
 type articleService struct {
@@ -25,22 +25,25 @@ type articleService struct {
 
 	// 2. 在 repo 里面处理制作库和线上库
 	// 1 和 2 是互斥的，不会同时存在
-	repo   article.ArticleRepository
-	logger logger.LoggerV1
+	repo     article.ArticleRepository
+	logger   logger.LoggerV1
+	producer events.Producer
 }
 
-func NewArticleService(repo article.ArticleRepository, l logger.LoggerV1) ArticleService {
+func NewArticleService(repo article.ArticleRepository, l logger.LoggerV1, producer events.Producer) ArticleService {
 	return &articleService{
-		repo:   repo,
-		logger: l,
+		repo:     repo,
+		logger:   l,
+		producer: producer,
 	}
 }
 
-func NewArticleServiceV1(authorRepo article.ArticleAuthorRepository, readerRepo article.ArticleReaderRepository, l logger.LoggerV1) ArticleService {
+func NewArticleServiceV1(authorRepo article.ArticleAuthorRepository, readerRepo article.ArticleReaderRepository, l logger.LoggerV1, producer events.Producer) ArticleService {
 	return &articleService{
 		authorRepo: authorRepo,
 		readerRepo: readerRepo,
 		logger:     l,
+		producer:   producer,
 	}
 }
 
@@ -107,8 +110,20 @@ func (svc *articleService) update(ctx context.Context, art domain.Article) error
 	return svc.repo.Update(ctx, art)
 }
 
-func (svc *articleService) GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error) {
-	return svc.repo.GetPublishedById(ctx, id)
+func (svc *articleService) GetPublishedById(ctx context.Context, id, uid int64) (domain.Article, error) {
+	res, err := svc.repo.GetPublishedById(ctx, id)
+	go func() {
+		if err == nil {
+			er := svc.producer.ProducerReadEvent(ctx, events.ReadEvent{
+				Aid: id,
+				Uid: uid,
+			})
+			if er != nil {
+				svc.logger.Error("发送消息失败", logger.Int64("uid", uid), logger.Int64("aid", id), logger.Error(err))
+			}
+		}
+	}()
+	return res, err
 }
 
 func (svc *articleService) List(ctx context.Context, uid int64, offset, limit int) ([]domain.Article, error) {

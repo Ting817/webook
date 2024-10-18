@@ -20,3 +20,10 @@ func Error(err error) Field {
 		Value: err,
 	}
 }
+
+func Int32(key string, val int32) Field {
+	return Field{
+		Key:   key,
+		Value: val,
+	}
+}

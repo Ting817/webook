@@ -3,7 +3,6 @@ package article
 import (
 	"context"
 	"github.com/ecodeclub/ekit/slice"
-	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"webook/internal/domain"
 	"webook/internal/repository"
@@ -21,7 +20,7 @@ type ArticleRepository interface {
 	SyncStatus(ctx context.Context, uid, id int64, status domain.ArticleStatus) error
 	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
-	GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error)
+	GetPublishedById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type CachedArticleRepository struct {
@@ -227,7 +226,7 @@ func (repo *CachedArticleRepository) List(ctx context.Context, uid int64, offset
 	return res, nil
 }
 
-func (repo *CachedArticleRepository) GetPublishedById(ctx *gin.Context, id int64) (domain.Article, error) {
+func (repo *CachedArticleRepository) GetPublishedById(ctx context.Context, id int64) (domain.Article, error) {
 	res, err := repo.cache.GetPub(ctx, id)
 	if err == nil {
 		return res, err

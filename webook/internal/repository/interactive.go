@@ -105,18 +105,22 @@ func (c *CachedReadCntRepository) Get(ctx context.Context, biz string, bizId int
 	}
 	ie, err := c.dao.Get(ctx, biz, bizId)
 	if err == nil {
-		res := c.toDomain(ie)
+		return domain.Interactive{}, err
+	}
+	res := c.toDomain(ie)
+	go func() {
 		if er := c.cache.Set(ctx, biz, bizId, res); er != nil {
 			c.l.Error("回写缓存失败",
 				logger.Int64("bizId", bizId),
 				logger.String("biz", biz),
 				logger.Error(er))
 		}
-		return res, nil
-	}
-	return domain.Interactive{}, err
+	}()
+
+	return res, nil
 }
 
+// 最简原则：1. 接收器永远用指针 2. 输入输出都用结构体
 func (c *CachedReadCntRepository) toDomain(intr dao.Interactive) domain.Interactive {
 	return domain.Interactive{
 		LikeCnt:    intr.LikeCnt,

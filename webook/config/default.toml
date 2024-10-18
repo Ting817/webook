@@ -8,3 +8,6 @@ dsn = "root:root@tcp(localhost:13316)/webook"
 
 [redis]
 addr = "localhost:6379"
+
+[kafka]
+addrs = "localhost:9094"

@@ -137,8 +137,8 @@ func (dao *GORMInteractiveDAO) InsertCollectionBiz(ctx context.Context, cb UserC
 		}
 		return tx.Clauses(clause.OnConflict{
 			DoUpdates: clause.Assignments(map[string]any{
-				"like_cnt": gorm.Expr("`like_cnt`+1"),
-				"utime":    now,
+				"collect_cnt": gorm.Expr("`collect_cnt`+1"),
+				"utime":       now,
 			}),
 		}).Create(&Interactive{
 			CollectCnt: 1,
