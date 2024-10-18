@@ -3,8 +3,8 @@
 package wire
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	article3 "webook/internal/events/article"
 	"webook/internal/repository"
 	article2 "webook/internal/repository/article"
 	"webook/internal/repository/cache"
@@ -16,13 +16,20 @@ import (
 	"webook/ioc"
 )
 
-func InitWebServer() *gin.Engine {
+func InitApp() *App {
 	wire.Build(
 		// 基础部分
 		ioc.NewCfg,
 		ioc.InitDB,
 		ioc.InitRedis,
 		ioc.InitLogger,
+		ioc.InitKafka,
+		ioc.NewConsumers,
+		ioc.NewSyncProducer,
+
+		// events 部分
+		article3.NewKafkaConsumer,
+		article3.NewKafkaProducer,
 
 		// DAO 部分
 		dao.NewUserDAO,
@@ -61,6 +68,7 @@ func InitWebServer() *gin.Engine {
 
 		// Web 服务器
 		ioc.InitWebServer,
+		wire.Struct(new(App), "*"),
 	)
-	return gin.Default()
+	return new(App)
 }
