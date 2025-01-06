@@ -10,6 +10,8 @@ import (
 
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	// BatchIncrReadCnt 这里调用者要保证 bizs 和 bizIds 长度一样
+	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
 	IncrLike(ctx context.Context, biz string, bizId, uid int64) error
 	DecrLike(ctx context.Context, biz string, bizId, uid int64) error
 	AddCollectionItem(ctx context.Context, biz string, bizId, cid int64, uid int64) error
@@ -80,6 +82,10 @@ func (c *CachedReadCntRepository) IncrReadCnt(ctx context.Context, biz string, b
 	}
 	// 这边会有部分失败引起的不一致的问题，但是其实不需要解决，因为阅读数不准确完全没有问题
 	return c.cache.IncrReadCntIfPresent(ctx, biz, bizId)
+}
+
+func (c *CachedReadCntRepository) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error {
+	return c.dao.BatchIncrReadCnt(ctx, bizs, bizIds)
 }
 
 func (c *CachedReadCntRepository) AddCollectionItem(ctx context.Context, biz string, bizId, cid, uid int64) error {

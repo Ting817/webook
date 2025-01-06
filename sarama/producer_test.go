@@ -11,6 +11,12 @@ var addrs = []string{"localhost:9094"}
 func TestProducer(t *testing.T) {
 	cfg := sarama.NewConfig()
 	cfg.Producer.Return.Successes = true
+	// 发送一次，不管服务端
+	cfg.Producer.RequiredAcks = sarama.NoResponse
+	// 发送，并且需要写入主分区
+	//cfg.Producer.RequiredAcks = sarama.WaitForLocal
+	// 发送，并且需要同步到所有的 ISR 上
+	//cfg.Producer.RequiredAcks = sarama.WaitForAll
 	cfg.Producer.Partitioner = sarama.NewRoundRobinPartitioner
 	//cfg.Producer.Partitioner = sarama.NewRandomPartitioner
 	cfg.Producer.Partitioner = sarama.NewHashPartitioner
